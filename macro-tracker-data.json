@@ -1,0 +1,536 @@
+{
+  "version": 1,
+  "exportDate": "2026-01-23T14:31:27.385Z",
+  "foods": [
+    {
+      "name": "Pithla",
+      "protein": 8.5,
+      "carbs": 14,
+      "fats": 6,
+      "calories": 145,
+      "category": "veg",
+      "servingOptions": [
+        {
+          "label": "1 Katori (150g)",
+          "weight": 150
+        },
+        {
+          "label": "1 Serving (200g)",
+          "weight": 200
+        }
+      ],
+      "isDefault": true,
+      "id": 1
+    },
+    {
+      "name": "Batata Bhaji",
+      "protein": 2,
+      "carbs": 18,
+      "fats": 7,
+      "calories": 143,
+      "category": "veg",
+      "servingOptions": [
+        {
+          "label": "1 Katori (150g)",
+          "weight": 150
+        },
+        {
+          "label": "1 Serving (100g)",
+          "weight": 100
+        }
+      ],
+      "isDefault": true,
+      "id": 2
+    },
+    {
+      "name": "Varana (Plain Dal)",
+      "protein": 7,
+      "carbs": 20,
+      "fats": 2.5,
+      "calories": 130,
+      "category": "veg",
+      "servingOptions": [
+        {
+          "label": "1 Katori (150g)",
+          "weight": 150
+        },
+        {
+          "label": "1 Bowl (200g)",
+          "weight": 200
+        }
+      ],
+      "isDefault": true,
+      "id": 3
+    },
+    {
+      "name": "Amti",
+      "protein": 6.5,
+      "carbs": 18,
+      "fats": 5,
+      "calories": 140,
+      "category": "veg",
+      "servingOptions": [
+        {
+          "label": "1 Katori (150g)",
+          "weight": 150
+        },
+        {
+          "label": "1 Bowl (200g)",
+          "weight": 200
+        }
+      ],
+      "isDefault": true,
+      "id": 4
+    },
+    {
+      "name": "Sabudana Khichdi",
+      "protein": 1.5,
+      "carbs": 35,
+      "fats": 8,
+      "calories": 215,
+      "category": "veg",
+      "servingOptions": [
+        {
+          "label": "1 Plate (150g)",
+          "weight": 150
+        },
+        {
+          "label": "1 Katori (100g)",
+          "weight": 100
+        }
+      ],
+      "isDefault": true,
+      "id": 5
+    },
+    {
+      "name": "Vangyache Bharit (Baingan Bharta)",
+      "protein": 2.5,
+      "carbs": 8,
+      "fats": 9,
+      "calories": 120,
+      "category": "veg",
+      "servingOptions": [
+        {
+          "label": "1 Katori (150g)",
+          "weight": 150
+        },
+        {
+          "label": "1 Serving (100g)",
+          "weight": 100
+        }
+      ],
+      "isDefault": true,
+      "id": 6
+    },
+    {
+      "name": "Usal (Sprouted Beans)",
+      "protein": 9,
+      "carbs": 22,
+      "fats": 4,
+      "calories": 158,
+      "category": "veg",
+      "servingOptions": [
+        {
+          "label": "1 Katori (150g)",
+          "weight": 150
+        },
+        {
+          "label": "1 Bowl (200g)",
+          "weight": 200
+        }
+      ],
+      "isDefault": true,
+      "id": 7
+    },
+    {
+      "name": "Kanda Poha",
+      "protein": 3,
+      "carbs": 28,
+      "fats": 6,
+      "calories": 180,
+      "category": "veg",
+      "servingOptions": [
+        {
+          "label": "1 Plate (150g)",
+          "weight": 150
+        },
+        {
+          "label": "1 Katori (100g)",
+          "weight": 100
+        }
+      ],
+      "isDefault": true,
+      "id": 8
+    },
+    {
+      "name": "Misal Pav (Misal only)",
+      "protein": 8,
+      "carbs": 20,
+      "fats": 7,
+      "calories": 175,
+      "category": "veg",
+      "servingOptions": [
+        {
+          "label": "1 Plate (200g)",
+          "weight": 200
+        },
+        {
+          "label": "1 Katori (150g)",
+          "weight": 150
+        }
+      ],
+      "isDefault": true,
+      "id": 9
+    },
+    {
+      "name": "Thalipeeth",
+      "protein": 4,
+      "carbs": 22,
+      "fats": 5,
+      "calories": 148,
+      "category": "veg",
+      "servingOptions": [
+        {
+          "label": "1 Medium (80g)",
+          "weight": 80
+        },
+        {
+          "label": "1 Large (100g)",
+          "weight": 100
+        }
+      ],
+      "isDefault": true,
+      "id": 10
+    },
+    {
+      "name": "Chicken Rassa",
+      "protein": 18,
+      "carbs": 6,
+      "fats": 12,
+      "calories": 200,
+      "category": "non-veg",
+      "servingOptions": [
+        {
+          "label": "1 Bowl (250g)",
+          "weight": 250
+        },
+        {
+          "label": "1 Katori (150g)",
+          "weight": 150
+        },
+        {
+          "label": "2 Pieces with gravy (200g)",
+          "weight": 200
+        }
+      ],
+      "isDefault": true,
+      "id": 11
+    },
+    {
+      "name": "Egg Curry",
+      "protein": 11,
+      "carbs": 5,
+      "fats": 14,
+      "calories": 185,
+      "category": "non-veg",
+      "servingOptions": [
+        {
+          "label": "2 Eggs with gravy (200g)",
+          "weight": 200
+        },
+        {
+          "label": "1 Egg with gravy (100g)",
+          "weight": 100
+        }
+      ],
+      "isDefault": true,
+      "id": 12
+    },
+    {
+      "name": "Mutton Sukka",
+      "protein": 25,
+      "carbs": 4,
+      "fats": 18,
+      "calories": 280,
+      "category": "non-veg",
+      "servingOptions": [
+        {
+          "label": "1 Serving (150g)",
+          "weight": 150
+        },
+        {
+          "label": "1 Katori (100g)",
+          "weight": 100
+        }
+      ],
+      "isDefault": true,
+      "id": 13
+    },
+    {
+      "name": "Fish Fry (Bangda)",
+      "protein": 22,
+      "carbs": 8,
+      "fats": 15,
+      "calories": 255,
+      "category": "non-veg",
+      "servingOptions": [
+        {
+          "label": "1 Medium Fish (120g)",
+          "weight": 120
+        },
+        {
+          "label": "2 Pieces (150g)",
+          "weight": 150
+        }
+      ],
+      "isDefault": true,
+      "id": 14
+    },
+    {
+      "name": "Kombdi Vade",
+      "protein": 16,
+      "carbs": 10,
+      "fats": 14,
+      "calories": 230,
+      "category": "non-veg",
+      "servingOptions": [
+        {
+          "label": "1 Bowl (200g)",
+          "weight": 200
+        },
+        {
+          "label": "1 Katori (150g)",
+          "weight": 150
+        }
+      ],
+      "isDefault": true,
+      "id": 15
+    },
+    {
+      "name": "Boiled Egg",
+      "protein": 13,
+      "carbs": 1.1,
+      "fats": 6,
+      "calories": 155,
+      "category": "non-veg",
+      "servingOptions": [
+        {
+          "label": "1 Egg (50g)",
+          "weight": 50
+        },
+        {
+          "label": "2 Eggs (100g)",
+          "weight": 100
+        }
+      ],
+      "isDefault": true,
+      "id": 16
+    },
+    {
+      "name": "Chapati / Poli",
+      "protein": 3,
+      "carbs": 18,
+      "fats": 1.5,
+      "calories": 97,
+      "category": "breads",
+      "servingOptions": [
+        {
+          "label": "1 Medium (40g)",
+          "weight": 40
+        },
+        {
+          "label": "1 Large (50g)",
+          "weight": 50
+        }
+      ],
+      "isDefault": true,
+      "id": 17
+    },
+    {
+      "name": "Jowar Bhakri",
+      "protein": 3.5,
+      "carbs": 25,
+      "fats": 1.2,
+      "calories": 125,
+      "category": "breads",
+      "servingOptions": [
+        {
+          "label": "1 Medium (60g)",
+          "weight": 60
+        },
+        {
+          "label": "1 Large (80g)",
+          "weight": 80
+        }
+      ],
+      "isDefault": true,
+      "id": 18
+    },
+    {
+      "name": "Bajra Bhakri",
+      "protein": 3.8,
+      "carbs": 24,
+      "fats": 1.5,
+      "calories": 125,
+      "category": "breads",
+      "servingOptions": [
+        {
+          "label": "1 Medium (60g)",
+          "weight": 60
+        },
+        {
+          "label": "1 Large (80g)",
+          "weight": 80
+        }
+      ],
+      "isDefault": true,
+      "id": 19
+    },
+    {
+      "name": "Rice (Cooked)",
+      "protein": 2.7,
+      "carbs": 28,
+      "fats": 0.3,
+      "calories": 130,
+      "category": "breads",
+      "servingOptions": [
+        {
+          "label": "1 Katori (150g)",
+          "weight": 150
+        },
+        {
+          "label": "1 Plate (200g)",
+          "weight": 200
+        },
+        {
+          "label": "100g",
+          "weight": 100
+        }
+      ],
+      "isDefault": true,
+      "id": 20
+    },
+    {
+      "name": "Pav",
+      "protein": 3.5,
+      "carbs": 24,
+      "fats": 2,
+      "calories": 130,
+      "category": "breads",
+      "servingOptions": [
+        {
+          "label": "1 Pav (40g)",
+          "weight": 40
+        },
+        {
+          "label": "2 Pav (80g)",
+          "weight": 80
+        }
+      ],
+      "isDefault": true,
+      "id": 21
+    },
+    {
+      "name": "Puran Poli",
+      "protein": 4,
+      "carbs": 45,
+      "fats": 6,
+      "calories": 250,
+      "category": "breads",
+      "servingOptions": [
+        {
+          "label": "1 Medium (80g)",
+          "weight": 80
+        },
+        {
+          "label": "1 Large (100g)",
+          "weight": 100
+        }
+      ],
+      "isDefault": true,
+      "id": 22
+    },
+    {
+      "name": "Chicken keema",
+      "protein": 18,
+      "carbs": 10,
+      "fats": 15,
+      "calories": 300,
+      "category": "non-veg",
+      "servingOptions": [
+        {
+          "label": "1 packet keema",
+          "weight": 450
+        }
+      ],
+      "isDefault": false,
+      "id": 23
+    }
+  ],
+  "logs": [
+    {
+      "date": "2026-01-23",
+      "foodId": 12,
+      "quantity": 2,
+      "unitLabel": "2 Eggs with gravy (200g)",
+      "unitWeight": 200,
+      "mealType": "dinner",
+      "id": 1
+    },
+    {
+      "date": "2026-01-23",
+      "foodId": 17,
+      "quantity": 3,
+      "unitLabel": "1 Medium (40g)",
+      "unitWeight": 40,
+      "mealType": "dinner",
+      "id": 2
+    },
+    {
+      "date": "2026-01-23",
+      "foodId": 23,
+      "quantity": 2.5,
+      "unitLabel": "100g",
+      "unitWeight": 100,
+      "mealType": "lunch",
+      "id": 3
+    },
+    {
+      "date": "2026-01-23",
+      "foodId": 16,
+      "quantity": 1,
+      "unitLabel": "2 Eggs (100g)",
+      "unitWeight": 100,
+      "mealType": "breakfast",
+      "id": 4
+    },
+    {
+      "date": "2026-01-23",
+      "foodId": 17,
+      "quantity": 2,
+      "unitLabel": "1 Medium (40g)",
+      "unitWeight": 40,
+      "mealType": "lunch",
+      "id": 5
+    }
+  ],
+  "weightLogs": [
+    {
+      "date": "2026-01-23",
+      "weight": 79,
+      "id": 1
+    }
+  ],
+  "userSettings": [
+    {
+      "id": 1,
+      "dailyGoals": {
+        "calories": 2000,
+        "protein": 120,
+        "carbs": 250,
+        "fats": 65
+      },
+      "fileHandleName": "macro-tracker-data.json"
+    }
+  ]
+}

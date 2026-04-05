@@ -1,0 +1,8 @@
+{
+  "name": "macro-tracker",
+  "private": true,
+  "description": "Regenerate INDB JSON from Excel (optional; Python script is primary).",
+  "scripts": {
+    "build:indb": "python3 scripts/indb_xlsx_to_json.py"
+  }
+}

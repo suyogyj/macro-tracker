@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Macro Tracker | Indian Food Edition</title>
+    
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Dexie.js for IndexedDB -->
+    <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.min.js"></script>
+    
+    <!-- Google Fonts - Distinctive typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Tailwind config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'deep-green': '#2D5A27',
+                        'deep-green-dark': '#1E3D1A',
+                        'saffron': '#FF9933',
+                        'saffron-dark': '#E6851F',
+                        'off-white': '#FDF8F3',
+                        'warm-cream': '#F5EDE4',
+                        'warm-gray': '#6B7280',
+                        'success': '#22C55E',
+                        'warning': '#F59E0B',
+                        'danger': '#EF4444'
+                    },
+                    fontFamily: {
+                        'display': ['Playfair Display', 'serif'],
+                        'sans': ['DM Sans', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-off-white font-sans text-gray-800 min-h-screen">
+    <!-- App Container -->
+    <div id="app" class="max-w-2xl mx-auto pb-24 md:pb-8">
+        
+        <!-- Header -->
+        <header class="sticky top-0 z-40 bg-deep-green text-white px-4 py-4 shadow-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="font-display text-2xl font-bold tracking-tight">Macro Tracker</h1>
+                    <p class="text-green-200 text-sm">Indian Food Edition</p>
+                </div>
+                <div class="text-right">
+                    <p id="header-date" class="text-sm text-green-200"></p>
+                    <p id="header-calories" class="text-lg font-semibold">0 / 2000 kcal</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Desktop Tab Navigation -->
+        <nav class="hidden md:flex bg-white border-b border-gray-200 sticky top-[88px] z-30">
+            <button class="tab-btn flex-1 py-3 px-4 text-center font-medium transition-colors border-b-2 border-transparent hover:bg-warm-cream" data-tab="today">
+                <span class="block text-lg">📅</span>
+                <span>Today</span>
+            </button>
+            <button class="tab-btn flex-1 py-3 px-4 text-center font-medium transition-colors border-b-2 border-transparent hover:bg-warm-cream" data-tab="library">
+                <span class="block text-lg">📚</span>
+                <span>Library</span>
+            </button>
+            <button class="tab-btn flex-1 py-3 px-4 text-center font-medium transition-colors border-b-2 border-transparent hover:bg-warm-cream" data-tab="analysis">
+                <span class="block text-lg">📊</span>
+                <span>Analysis</span>
+            </button>
+            <button class="tab-btn flex-1 py-3 px-4 text-center font-medium transition-colors border-b-2 border-transparent hover:bg-warm-cream" data-tab="settings">
+                <span class="block text-lg">⚙️</span>
+                <span>Settings</span>
+            </button>
+        </nav>
+
+        <!-- Tab Content Container -->
+        <main class="px-4 py-6">
+            
+            <!-- TODAY TAB -->
+            <section id="tab-today" class="tab-content">
+                
+                <!-- Date Navigation -->
+                <div class="flex items-center justify-between mb-4">
+                    <button id="prev-day-btn" class="p-2 rounded-lg bg-white shadow hover:bg-warm-cream transition-colors">
+                        <svg class="w-5 h-5 text-deep-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="flex items-center gap-2">
+                        <button id="selected-date-text" class="text-lg font-semibold text-deep-green px-3 py-1 rounded-lg hover:bg-white hover:shadow transition-all cursor-pointer" onclick="document.getElementById('date-picker').showPicker()">
+                            Today
+                        </button>
+                        <input type="date" id="date-picker" class="sr-only">
+                        <button id="go-to-today-btn" class="hidden text-xs bg-saffron text-white px-2 py-1 rounded-full font-medium hover:bg-saffron-dark transition-colors">
+                            Today
+                        </button>
+                    </div>
+                    
+                    <button id="next-day-btn" class="p-2 rounded-lg bg-white shadow hover:bg-warm-cream transition-colors disabled:opacity-30" disabled>
+                        <svg class="w-5 h-5 text-deep-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Smart Insights Card -->
+                <div id="insights-card" class="bg-gradient-to-r from-saffron to-yellow-400 rounded-2xl p-4 mb-6 shadow-md">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">💡</span>
+                        <div>
+                            <h3 class="font-semibold text-white">Today's Insight</h3>
+                            <p id="insight-text" class="text-white/90 text-sm mt-1">Start logging your meals to get personalized insights!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Daily Progress -->
+                <div class="bg-white rounded-2xl p-5 shadow-md mb-6">
+                    <h2 class="font-display text-xl font-semibold text-deep-green mb-4">Daily Progress</h2>
+                    
+                    <!-- Progress Bars -->
+                    <div class="space-y-4">
+                        <!-- Calories -->
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="font-medium">Calories</span>
+                                <span id="progress-calories-text" class="text-warm-gray">0 / 2000 kcal</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div id="progress-calories" class="h-full bg-gradient-to-r from-saffron to-yellow-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Protein -->
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="font-medium">Protein</span>
+                                <span id="progress-protein-text" class="text-warm-gray">0 / 120g</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div id="progress-protein" class="h-full bg-gradient-to-r from-red-400 to-red-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Carbs -->
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="font-medium">Carbs</span>
+                                <span id="progress-carbs-text" class="text-warm-gray">0 / 250g</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div id="progress-carbs" class="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Fats -->
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="font-medium">Fats</span>
+                                <span id="progress-fats-text" class="text-warm-gray">0 / 65g</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div id="progress-fats" class="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Meal Sections -->
+                <div class="space-y-4">
+                    <!-- Breakfast -->
+                    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+                        <div class="flex items-center justify-between p-4 bg-warm-cream">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">🌅</span>
+                                <h3 class="font-semibold">Breakfast</h3>
+                            </div>
+                            <button class="add-food-btn bg-deep-green text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-deep-green-dark transition-colors" data-meal="breakfast">
+                                + Add
+                            </button>
+                        </div>
+                        <div id="meal-breakfast" class="p-4 space-y-2 min-h-[60px]">
+                            <p class="text-warm-gray text-sm text-center py-2">No items logged</p>
+                        </div>
+                    </div>
+
+                    <!-- Lunch -->
+                    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+                        <div class="flex items-center justify-between p-4 bg-warm-cream">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">☀️</span>
+                                <h3 class="font-semibold">Lunch</h3>
+                            </div>
+                            <button class="add-food-btn bg-deep-green text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-deep-green-dark transition-colors" data-meal="lunch">
+                                + Add
+                            </button>
+                        </div>
+                        <div id="meal-lunch" class="p-4 space-y-2 min-h-[60px]">
+                            <p class="text-warm-gray text-sm text-center py-2">No items logged</p>
+                        </div>
+                    </div>
+
+                    <!-- Dinner -->
+                    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+                        <div class="flex items-center justify-between p-4 bg-warm-cream">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">🌙</span>
+                                <h3 class="font-semibold">Dinner</h3>
+                            </div>
+                            <button class="add-food-btn bg-deep-green text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-deep-green-dark transition-colors" data-meal="dinner">
+                                + Add
+                            </button>
+                        </div>
+                        <div id="meal-dinner" class="p-4 space-y-2 min-h-[60px]">
+                            <p class="text-warm-gray text-sm text-center py-2">No items logged</p>
+                        </div>
+                    </div>
+
+                    <!-- Snacks -->
+                    <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+                        <div class="flex items-center justify-between p-4 bg-warm-cream">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">🍪</span>
+                                <h3 class="font-semibold">Snacks</h3>
+                            </div>
+                            <button class="add-food-btn bg-deep-green text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-deep-green-dark transition-colors" data-meal="snacks">
+                                + Add
+                            </button>
+                        </div>
+                        <div id="meal-snacks" class="p-4 space-y-2 min-h-[60px]">
+                            <p class="text-warm-gray text-sm text-center py-2">No items logged</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- LIBRARY TAB -->
+            <section id="tab-library" class="tab-content hidden">
+                <!-- Search and Filter -->
+                <div class="bg-white rounded-2xl p-4 shadow-md mb-6">
+                    <div class="relative mb-4">
+                        <input type="text" id="food-search" placeholder="Search foods..." 
+                            class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green focus:border-transparent">
+                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-warm-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                    
+                    <!-- Category Filters -->
+                    <div class="flex gap-2 flex-wrap">
+                        <button class="category-btn active px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-category="all">All</button>
+                        <button class="category-btn px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-category="veg">🥬 Veg</button>
+                        <button class="category-btn px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-category="non-veg">🍗 Non-Veg</button>
+                        <button class="category-btn px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-category="breads">🫓 Breads</button>
+                        <button class="category-btn px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-category="supplements">🥤 Protein</button>
+                        <button class="category-btn px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-category="running-supps">🏃 Running</button>
+                        <button class="category-btn px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-category="indb">📗 INDB</button>
+                        <button class="category-btn px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-category="custom">⭐ Custom</button>
+                    </div>
+                </div>
+
+                <!-- Food List -->
+                <div id="food-list" class="space-y-3">
+                    <!-- Foods will be rendered here -->
+                </div>
+
+                <!-- Add Custom Food FAB -->
+                <button id="add-custom-food-btn" class="fixed bottom-24 md:bottom-8 right-4 md:right-auto md:left-1/2 md:translate-x-[280px] bg-saffron text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-saffron-dark transition-colors z-30">
+                    +
+                </button>
+            </section>
+
+            <!-- ANALYSIS TAB -->
+            <section id="tab-analysis" class="tab-content hidden">
+                
+                <!-- Weight Tracker Card -->
+                <div class="bg-white rounded-2xl p-5 shadow-md mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-display text-xl font-semibold text-deep-green">Weight Tracker</h2>
+                        <button id="log-weight-btn" class="bg-deep-green text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-deep-green-dark transition-colors">
+                            + Log Weight
+                        </button>
+                    </div>
+                    
+                    <!-- Current Weight Display -->
+                    <div class="flex items-end gap-4 mb-4">
+                        <div>
+                            <p class="text-warm-gray text-sm">Current</p>
+                            <p id="current-weight" class="text-3xl font-bold text-deep-green">-- kg</p>
+                        </div>
+                        <div id="weight-change" class="text-sm pb-1">
+                            <!-- Change indicator will go here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Weight Chart -->
+                    <div class="h-48">
+                        <canvas id="weight-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Macro Split Pie Chart -->
+                <div class="bg-white rounded-2xl p-5 shadow-md mb-6">
+                    <h2 class="font-display text-xl font-semibold text-deep-green mb-4">Today's Macro Split</h2>
+                    <div class="h-64 flex items-center justify-center">
+                        <canvas id="macro-pie-chart"></canvas>
+                    </div>
+                    <div id="macro-pie-legend" class="flex justify-center gap-6 mt-4 text-sm">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-400"></span> Protein</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-400"></span> Carbs</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-400"></span> Fats</span>
+                    </div>
+                </div>
+
+                <!-- 7-Day Calorie Trend -->
+                <div class="bg-white rounded-2xl p-5 shadow-md mb-6">
+                    <h2 class="font-display text-xl font-semibold text-deep-green mb-4">7-Day Calorie Trend</h2>
+                    <div class="h-64">
+                        <canvas id="calorie-trend-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Weekly Summary -->
+                <div class="bg-white rounded-2xl p-5 shadow-md">
+                    <h2 class="font-display text-xl font-semibold text-deep-green mb-4">Weekly Averages</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-warm-cream rounded-xl p-4 text-center">
+                            <p class="text-warm-gray text-sm">Avg Calories</p>
+                            <p id="avg-calories" class="text-2xl font-bold text-saffron">--</p>
+                        </div>
+                        <div class="bg-warm-cream rounded-xl p-4 text-center">
+                            <p class="text-warm-gray text-sm">Avg Protein</p>
+                            <p id="avg-protein" class="text-2xl font-bold text-red-500">--</p>
+                        </div>
+                        <div class="bg-warm-cream rounded-xl p-4 text-center">
+                            <p class="text-warm-gray text-sm">Avg Carbs</p>
+                            <p id="avg-carbs" class="text-2xl font-bold text-blue-500">--</p>
+                        </div>
+                        <div class="bg-warm-cream rounded-xl p-4 text-center">
+                            <p class="text-warm-gray text-sm">Avg Fats</p>
+                            <p id="avg-fats" class="text-2xl font-bold text-green-500">--</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SETTINGS TAB -->
+            <section id="tab-settings" class="tab-content hidden">
+                
+                <!-- Cloud sync (Supabase) -->
+                <div id="cloud-sync-card" class="bg-white rounded-2xl p-5 shadow-md mb-6">
+                    <h2 class="font-display text-xl font-semibold text-deep-green mb-4">Cloud sync</h2>
+                    <p class="text-warm-gray text-sm mb-4">Sign in with email (magic link) to back up logs, custom foods, goals, and weight on <strong>Supabase</strong>. Data syncs automatically after you make changes.</p>
+
+                    <div id="supabase-auth-signed-out" class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" id="supabase-email" placeholder="you@example.com"
+                                class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green">
+                        </div>
+                        <button type="button" id="supabase-magic-link-btn" class="w-full bg-deep-green text-white py-3 rounded-xl font-semibold hover:bg-deep-green-dark transition-colors">
+                            Send magic link
+                        </button>
+                    </div>
+
+                    <div id="supabase-auth-signed-in" class="hidden space-y-3">
+                        <p class="text-sm text-warm-gray">Signed in as <span id="supabase-user-email" class="font-medium text-gray-800"></span></p>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <button type="button" id="supabase-sync-now-btn" class="flex-1 bg-saffron text-white py-2.5 rounded-xl font-semibold hover:bg-saffron-dark transition-colors">
+                                Save to cloud now
+                            </button>
+                            <button type="button" id="supabase-pull-btn" class="flex-1 bg-gray-100 text-gray-800 py-2.5 rounded-xl font-semibold hover:bg-gray-200 transition-colors">
+                                Pull from cloud
+                            </button>
+                        </div>
+                        <button type="button" id="supabase-sign-out-btn" class="w-full text-sm text-warm-gray hover:text-gray-800 py-2">
+                            Sign out
+                        </button>
+                    </div>
+
+                    <p id="sync-status-text" class="text-xs text-warm-gray mt-3"></p>
+                    <p id="supabase-config-hint" class="text-xs text-amber-700 mt-2 hidden">Add <code class="bg-amber-50 px-1 rounded">supabaseUrl</code> and <code class="bg-amber-50 px-1 rounded">supabaseAnonKey</code> in <code class="bg-amber-50 px-1 rounded">config.js</code> to enable cloud sync.</p>
+                </div>
+
+                <!-- Daily Goals -->
+                <div class="bg-white rounded-2xl p-5 shadow-md mb-6">
+                    <h2 class="font-display text-xl font-semibold text-deep-green mb-4">Daily Goals</h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Calories (kcal)</label>
+                            <input type="number" id="goal-calories" value="2000" min="1000" max="5000" step="50"
+                                class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Protein (g)</label>
+                            <input type="number" id="goal-protein" value="120" min="30" max="300" step="5"
+                                class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Carbs (g)</label>
+                            <input type="number" id="goal-carbs" value="250" min="50" max="500" step="5"
+                                class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Fats (g)</label>
+                            <input type="number" id="goal-fats" value="65" min="20" max="200" step="5"
+                                class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green">
+                        </div>
+                        
+                        <button id="save-goals-btn" class="w-full bg-deep-green text-white py-3 rounded-xl font-semibold hover:bg-deep-green-dark transition-colors">
+                            Save Goals
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Local File Storage -->
+                <div class="bg-white rounded-2xl p-5 shadow-md mb-6">
+                    <h2 class="font-display text-xl font-semibold text-deep-green mb-4">Local File Storage</h2>
+                    <p class="text-warm-gray text-sm mb-4">Save your data to a JSON file in your folder. Changes will auto-save to this file.</p>
+                    
+                    <div id="file-storage-status" class="bg-warm-cream rounded-xl p-3 mb-4">
+                        <div class="flex items-center gap-2">
+                            <span id="storage-indicator" class="w-3 h-3 rounded-full bg-gray-400"></span>
+                            <span id="storage-status-text" class="text-sm">No file selected (using browser storage)</span>
+                        </div>
+                        <p id="storage-file-path" class="text-xs text-warm-gray mt-1 truncate hidden"></p>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <button id="set-storage-file-btn" class="w-full flex items-center justify-center gap-2 bg-deep-green text-white py-3 rounded-xl font-semibold hover:bg-deep-green-dark transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                            </svg>
+                            Choose Storage File
+                        </button>
+                        
+                        <button id="disconnect-storage-btn" class="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-colors hidden">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                            </svg>
+                            Disconnect File
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Data Management -->
+                <div class="bg-white rounded-2xl p-5 shadow-md mb-6">
+                    <h2 class="font-display text-xl font-semibold text-deep-green mb-4">Backup & Restore</h2>
+                    
+                    <div class="space-y-3">
+                        <button id="export-data-btn" class="w-full flex items-center justify-center gap-2 bg-saffron text-white py-3 rounded-xl font-semibold hover:bg-saffron-dark transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                            </svg>
+                            Download Backup (JSON)
+                        </button>
+                        
+                        <label class="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-colors cursor-pointer">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                            </svg>
+                            Restore from Backup
+                            <input type="file" id="import-data-input" accept=".json" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="bg-white rounded-2xl p-5 shadow-md border-2 border-red-200">
+                    <h2 class="font-display text-xl font-semibold text-danger mb-4">Danger Zone</h2>
+                    <p class="text-warm-gray text-sm mb-4">This clears food logs, weight history, and resets goals. Starter + INDB catalog and your custom dishes are kept and the food library is rebuilt.</p>
+                    <button id="reset-data-btn" class="w-full bg-red-100 text-danger py-3 rounded-xl font-semibold hover:bg-red-200 transition-colors">
+                        Reset All Data
+                    </button>
+                </div>
+
+                <!-- App Info -->
+                <div class="mt-8 text-center text-warm-gray text-sm">
+                    <p>Macro Tracker - Indian Food Edition</p>
+                    <p>Version 1.0 | Local-First App</p>
+                    <p class="mt-2">All data stored locally in your browser</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Mobile Bottom Navigation -->
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+            <div class="flex">
+                <button class="tab-btn flex-1 py-3 text-center transition-colors" data-tab="today">
+                    <span class="block text-xl">📅</span>
+                    <span class="text-xs font-medium">Today</span>
+                </button>
+                <button class="tab-btn flex-1 py-3 text-center transition-colors" data-tab="library">
+                    <span class="block text-xl">📚</span>
+                    <span class="text-xs font-medium">Library</span>
+                </button>
+                <button class="tab-btn flex-1 py-3 text-center transition-colors" data-tab="analysis">
+                    <span class="block text-xl">📊</span>
+                    <span class="text-xs font-medium">Analysis</span>
+                </button>
+                <button class="tab-btn flex-1 py-3 text-center transition-colors" data-tab="settings">
+                    <span class="block text-xl">⚙️</span>
+                    <span class="text-xs font-medium">Settings</span>
+                </button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- MODALS -->
+
+    <!-- Add Food Modal -->
+    <div id="add-food-modal" class="modal fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="font-display text-xl font-semibold text-deep-green">Add Food</h3>
+                <button class="close-modal text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            
+            <div class="p-4 overflow-y-auto flex-1">
+                <!-- Food Search in Modal -->
+                <div class="relative mb-4">
+                    <input type="text" id="modal-food-search" placeholder="Search foods..." 
+                        class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-warm-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+
+                <!-- Food Selection List -->
+                <div id="modal-food-list" class="space-y-2 mb-4 max-h-48 overflow-y-auto">
+                    <!-- Foods will be rendered here -->
+                </div>
+
+                <!-- Selected Food Details -->
+                <div id="selected-food-details" class="hidden border-t border-gray-200 pt-4">
+                    <div class="bg-warm-cream rounded-xl p-4 mb-4">
+                        <h4 id="selected-food-name" class="font-semibold text-deep-green"></h4>
+                        <p id="selected-food-macros" class="text-sm text-warm-gray mt-1"></p>
+                    </div>
+
+                    <!-- Quantity Input -->
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                            <input type="number" id="food-quantity" value="1" min="0.25" step="0.25"
+                                class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                            <select id="food-unit" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green">
+                                <!-- Options will be populated -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Calculated Macros Preview -->
+                    <div class="bg-gray-50 rounded-xl p-4 mb-4">
+                        <p class="text-sm text-warm-gray mb-2">This will add:</p>
+                        <div class="grid grid-cols-4 gap-2 text-center">
+                            <div>
+                                <p id="calc-calories" class="text-lg font-bold text-saffron">0</p>
+                                <p class="text-xs text-warm-gray">kcal</p>
+                            </div>
+                            <div>
+                                <p id="calc-protein" class="text-lg font-bold text-red-500">0g</p>
+                                <p class="text-xs text-warm-gray">Protein</p>
+                            </div>
+                            <div>
+                                <p id="calc-carbs" class="text-lg font-bold text-blue-500">0g</p>
+                                <p class="text-xs text-warm-gray">Carbs</p>
+                            </div>
+                            <div>
+                                <p id="calc-fats" class="text-lg font-bold text-green-500">0g</p>
+                                <p class="text-xs text-warm-gray">Fats</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="selected-meal-type" value="">
+                    
+                    <button id="confirm-add-food" class="w-full bg-deep-green text-white py-3 rounded-xl font-semibold hover:bg-deep-green-dark transition-colors">
+                        Add to Meal
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Food Modal -->
+    <div id="custom-food-modal" class="modal fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="font-display text-xl font-semibold text-deep-green">Create Custom Dish</h3>
+                <button class="close-modal text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            
+            <div class="p-4 overflow-y-auto flex-1">
+                <form id="custom-food-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Dish Name</label>
+                        <input type="text" id="custom-name" required placeholder="e.g., My Special Rassa"
+                            class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                        <select id="custom-category" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green">
+                            <option value="veg">🥬 Vegetarian</option>
+                            <option value="non-veg">🍗 Non-Vegetarian</option>
+                            <option value="breads">🫓 Breads</option>
+                            <option value="supplements">🥤 Protein Supplement</option>
+                            <option value="running-supps">🏃 Running Supplement</option>
+                            <option value="custom">⭐ Custom</option>
+                        </select>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-4">
+                        <p class="text-sm font-medium text-gray-700 mb-3">Macros per 100g</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-warm-gray mb-1">Calories (kcal)</label>
+                                <input type="number" id="custom-calories" required min="0" step="1" placeholder="150"
+                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-deep-green">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-warm-gray mb-1">Protein (g)</label>
+                                <input type="number" id="custom-protein" required min="0" step="0.1" placeholder="8"
+                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-deep-green">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-warm-gray mb-1">Carbs (g)</label>
+                                <input type="number" id="custom-carbs" required min="0" step="0.1" placeholder="20"
+                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-deep-green">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-warm-gray mb-1">Fats (g)</label>
+                                <input type="number" id="custom-fats" required min="0" step="0.1" placeholder="5"
+                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-deep-green">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-sm font-medium text-gray-700">Serving Options</p>
+                            <button type="button" id="add-serving-option" class="text-deep-green text-sm font-medium hover:underline">+ Add Option</button>
+                        </div>
+                        
+                        <div id="serving-options-list" class="space-y-3">
+                            <!-- Default serving option -->
+                            <div class="serving-option flex gap-2">
+                                <input type="text" placeholder="e.g., 1 Bowl" class="serving-label flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-deep-green">
+                                <input type="number" placeholder="g" class="serving-weight w-20 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-deep-green">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-saffron text-white py-3 rounded-xl font-semibold hover:bg-saffron-dark transition-colors mt-4">
+                        Create Dish
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Weight Modal -->
+    <div id="weight-modal" class="modal fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
+            <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="font-display text-xl font-semibold text-deep-green">Log Weight</h3>
+                <button class="close-modal text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            
+            <div class="p-4">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                    <input type="date" id="weight-date" 
+                        class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                    <input type="number" id="weight-value" step="0.1" min="20" max="300" placeholder="70.0"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl text-2xl text-center font-bold focus:outline-none focus:ring-2 focus:ring-deep-green">
+                </div>
+                
+                <button id="save-weight-btn" class="w-full bg-deep-green text-white py-3 rounded-xl font-semibold hover:bg-deep-green-dark transition-colors">
+                    Save Weight
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Reset Modal -->
+    <div id="confirm-reset-modal" class="modal fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
+            <div class="p-4 border-b border-gray-200">
+                <h3 class="font-display text-xl font-semibold text-danger">Confirm Reset</h3>
+            </div>
+            
+            <div class="p-4">
+                <p class="text-gray-600 mb-6">Are you sure you want to delete all your data? This action cannot be undone.</p>
+                
+                <div class="flex gap-3">
+                    <button class="close-modal flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-colors">
+                        Cancel
+                    </button>
+                    <button id="confirm-reset-btn" class="flex-1 bg-danger text-white py-3 rounded-xl font-semibold hover:bg-red-600 transition-colors">
+                        Delete All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Food Modal -->
+    <div id="edit-food-modal" class="modal fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="font-display text-xl font-semibold text-deep-green">Edit Dish</h3>
+                <button class="close-modal text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            
+            <div class="p-4 overflow-y-auto flex-1">
+                <form id="edit-food-form" class="space-y-4">
+                    <input type="hidden" id="edit-food-id">
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Dish Name</label>
+                        <input type="text" id="edit-name" required
+                            class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                        <select id="edit-category" class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green">
+                            <option value="veg">🥬 Vegetarian</option>
+                            <option value="non-veg">🍗 Non-Vegetarian</option>
+                            <option value="breads">🫓 Breads</option>
+                            <option value="supplements">🥤 Protein Supplement</option>
+                            <option value="running-supps">🏃 Running Supplement</option>
+                            <option value="custom">⭐ Custom</option>
+                        </select>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-4">
+                        <p class="text-sm font-medium text-gray-700 mb-3">Macros per 100g</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-warm-gray mb-1">Calories (kcal)</label>
+                                <input type="number" id="edit-calories" required min="0" step="1"
+                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-deep-green">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-warm-gray mb-1">Protein (g)</label>
+                                <input type="number" id="edit-protein" required min="0" step="0.1"
+                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-deep-green">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-warm-gray mb-1">Carbs (g)</label>
+                                <input type="number" id="edit-carbs" required min="0" step="0.1"
+                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-deep-green">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-warm-gray mb-1">Fats (g)</label>
+                                <input type="number" id="edit-fats" required min="0" step="0.1"
+                                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-deep-green">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-sm font-medium text-gray-700">Serving Options</p>
+                            <button type="button" id="edit-add-serving-option" class="text-deep-green text-sm font-medium hover:underline">+ Add Option</button>
+                        </div>
+                        
+                        <div id="edit-serving-options-list" class="space-y-3">
+                            <!-- Serving options will be populated -->
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 pt-4">
+                        <button type="button" id="delete-food-btn" class="flex-1 bg-red-100 text-danger py-3 rounded-xl font-semibold hover:bg-red-200 transition-colors">
+                            Delete
+                        </button>
+                        <button type="submit" class="flex-1 bg-deep-green text-white py-3 rounded-xl font-semibold hover:bg-deep-green-dark transition-colors">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-28 md:bottom-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-xl shadow-lg z-50 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none">
+        <span id="toast-message">Action completed</span>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.10/dist/umd/supabase.min.js"></script>
+    <!-- App JS -->
+    <script src="app.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,692 @@
+/**
+ * Macro Tracker - Indian Food Edition
+ * Custom Styles with Spiced Palette
+ * 
+ * Color Palette:
+ * - Deep Green: #2D5A27 (Primary)
+ * - Saffron Orange: #FF9933 (Accent)
+ * - Off White: #FDF8F3 (Background)
+ * - Warm Cream: #F5EDE4 (Secondary Background)
+ */
+
+/* ===== CSS Custom Properties ===== */
+:root {
+    --deep-green: #2D5A27;
+    --deep-green-dark: #1E3D1A;
+    --deep-green-light: #3D7A35;
+    --saffron: #FF9933;
+    --saffron-dark: #E6851F;
+    --saffron-light: #FFB366;
+    --off-white: #FDF8F3;
+    --warm-cream: #F5EDE4;
+    --warm-gray: #6B7280;
+    --text-dark: #1F2937;
+    --success: #22C55E;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-normal: 300ms ease;
+}
+
+/* ===== Base Styles ===== */
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--off-white);
+    color: var(--text-dark);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Subtle background pattern */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        radial-gradient(circle at 25px 25px, rgba(45, 90, 39, 0.03) 2px, transparent 0),
+        radial-gradient(circle at 75px 75px, rgba(255, 153, 51, 0.03) 2px, transparent 0);
+    background-size: 100px 100px;
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* ===== Typography ===== */
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    font-weight: 600;
+}
+
+/* ===== Tab Navigation ===== */
+.tab-btn {
+    position: relative;
+    color: var(--warm-gray);
+}
+
+.tab-btn.active {
+    color: var(--deep-green);
+}
+
+/* Desktop tab indicator */
+@media (min-width: 768px) {
+    .tab-btn.active {
+        border-bottom-color: var(--deep-green) !important;
+    }
+}
+
+/* Mobile tab indicator */
+@media (max-width: 767px) {
+    .tab-btn.active::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 24px;
+        height: 3px;
+        background: var(--deep-green);
+        border-radius: 0 0 3px 3px;
+    }
+}
+
+/* ===== Tab Content Transitions ===== */
+.tab-content {
+    animation: fadeIn var(--transition-normal);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== Cards ===== */
+.bg-white {
+    background-color: white;
+}
+
+/* Card hover effect for interactive cards */
+.food-card {
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.food-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* ===== Progress Bars ===== */
+.progress-bar {
+    transition: width 500ms ease-out;
+}
+
+/* Progress bar glow effect */
+#progress-calories {
+    box-shadow: 0 0 8px rgba(255, 153, 51, 0.4);
+}
+
+#progress-protein {
+    box-shadow: 0 0 8px rgba(248, 113, 113, 0.4);
+}
+
+#progress-carbs {
+    box-shadow: 0 0 8px rgba(96, 165, 250, 0.4);
+}
+
+#progress-fats {
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
+}
+
+/* ===== Buttons ===== */
+button {
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+}
+
+button:focus {
+    outline: none;
+}
+
+button:focus-visible {
+    outline: 2px solid var(--deep-green);
+    outline-offset: 2px;
+}
+
+/* Ripple effect on buttons */
+.add-food-btn,
+#add-custom-food-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.add-food-btn::after,
+#add-custom-food-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.add-food-btn:active::after,
+#add-custom-food-btn:active::after {
+    width: 200px;
+    height: 200px;
+}
+
+/* ===== FAB (Floating Action Button) ===== */
+#add-custom-food-btn {
+    animation: fabPulse 2s infinite;
+}
+
+@keyframes fabPulse {
+    0%, 100% {
+        box-shadow: 0 4px 15px rgba(255, 153, 51, 0.4);
+    }
+    50% {
+        box-shadow: 0 4px 25px rgba(255, 153, 51, 0.6);
+    }
+}
+
+#add-custom-food-btn:hover {
+    animation: none;
+    /* Use box-shadow for hover effect instead of transform to preserve Tailwind's translate-x */
+    box-shadow: 0 6px 20px rgba(255, 153, 51, 0.7);
+}
+
+/* ===== Category Buttons ===== */
+.category-btn {
+    transition: all var(--transition-fast);
+}
+
+.category-btn.active {
+    background-color: var(--deep-green) !important;
+    color: white !important;
+}
+
+/* ===== Modals ===== */
+.modal {
+    backdrop-filter: blur(4px);
+    transition: opacity var(--transition-fast);
+}
+
+.modal.show {
+    display: flex !important;
+}
+
+.modal > div {
+    animation: modalSlideIn var(--transition-normal);
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* ===== Form Inputs ===== */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select {
+    font-family: inherit;
+    font-size: 1rem;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+input[type="text"]:hover,
+input[type="number"]:hover,
+input[type="date"]:hover,
+select:hover {
+    border-color: var(--warm-gray);
+}
+
+/* Number input spinner styling */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
+    height: 32px;
+}
+
+/* ===== Food Cards in Library ===== */
+.food-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: white;
+    border-radius: 1rem;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-fast);
+}
+
+.food-item:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.food-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.food-item-name {
+    font-weight: 600;
+    color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.food-item-macros {
+    font-size: 0.75rem;
+    color: var(--warm-gray);
+    margin-top: 0.25rem;
+}
+
+.food-item-category {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    background: var(--warm-cream);
+    color: var(--warm-gray);
+}
+
+/* ===== Logged Food Items ===== */
+.logged-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: var(--off-white);
+    border-radius: 0.75rem;
+    transition: all var(--transition-fast);
+}
+
+.logged-item:hover {
+    background: var(--warm-cream);
+}
+
+.logged-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.logged-item-name {
+    font-weight: 500;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.logged-item-details {
+    font-size: 0.75rem;
+    color: var(--warm-gray);
+}
+
+.logged-item-delete {
+    color: var(--danger);
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: background var(--transition-fast);
+}
+
+.logged-item-delete:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* ===== Insights Card ===== */
+#insights-card {
+    position: relative;
+    overflow: hidden;
+}
+
+#insights-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% {
+        transform: translate(0, 0);
+    }
+    50% {
+        transform: translate(-25%, 25%);
+    }
+}
+
+/* ===== Charts ===== */
+canvas {
+    max-width: 100%;
+}
+
+/* ===== Toast Notifications ===== */
+#toast {
+    font-weight: 500;
+}
+
+#toast.show {
+    opacity: 1 !important;
+    transform: translateX(-50%) translateY(0) !important;
+    pointer-events: auto !important;
+}
+
+/* Toast variants */
+#toast.success {
+    background-color: var(--success);
+}
+
+#toast.error {
+    background-color: var(--danger);
+}
+
+#toast.warning {
+    background-color: var(--warning);
+}
+
+/* ===== Scrollbar Styling ===== */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--warm-gray);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--deep-green);
+}
+
+/* ===== Selection ===== */
+::selection {
+    background: var(--saffron-light);
+    color: var(--text-dark);
+}
+
+/* ===== Date Navigation ===== */
+#prev-day-btn,
+#next-day-btn {
+    min-width: 40px;
+    min-height: 40px;
+}
+
+#selected-date-text {
+    min-width: 120px;
+    text-align: center;
+}
+
+/* Hide the native date picker but keep it functional */
+#date-picker {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+/* Style for viewing past days */
+.viewing-past-day #insights-card {
+    background: linear-gradient(to right, #6B7280, #9CA3AF);
+}
+
+/* ===== Loading State ===== */
+.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ===== Empty State ===== */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--warm-gray);
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* ===== Responsive Adjustments ===== */
+
+/* Mobile (default) */
+@media (max-width: 639px) {
+    .modal > div {
+        margin: 0.5rem;
+        max-height: calc(100vh - 1rem);
+    }
+    
+    #add-custom-food-btn {
+        bottom: 5.5rem;
+        right: 1rem;
+    }
+}
+
+/* Tablet and up */
+@media (min-width: 640px) {
+    body {
+        padding: 0 1rem;
+    }
+}
+
+/* Desktop */
+@media (min-width: 768px) {
+    #app {
+        padding-top: 1rem;
+    }
+    
+    header {
+        border-radius: 1rem 1rem 0 0;
+    }
+}
+
+/* ===== Print Styles ===== */
+@media print {
+    body {
+        background: white;
+    }
+    
+    nav,
+    .add-food-btn,
+    #add-custom-food-btn,
+    .modal {
+        display: none !important;
+    }
+    
+    .tab-content {
+        display: block !important;
+    }
+}
+
+/* ===== Animations for Various Elements ===== */
+
+/* Staggered list animation */
+.food-item,
+.logged-item {
+    animation: listItemIn 0.3s ease backwards;
+}
+
+.food-item:nth-child(1), .logged-item:nth-child(1) { animation-delay: 0ms; }
+.food-item:nth-child(2), .logged-item:nth-child(2) { animation-delay: 50ms; }
+.food-item:nth-child(3), .logged-item:nth-child(3) { animation-delay: 100ms; }
+.food-item:nth-child(4), .logged-item:nth-child(4) { animation-delay: 150ms; }
+.food-item:nth-child(5), .logged-item:nth-child(5) { animation-delay: 200ms; }
+
+@keyframes listItemIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Delete animation */
+.logged-item.deleting {
+    animation: slideOut 0.3s ease forwards;
+}
+
+@keyframes slideOut {
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+        height: 0;
+        padding: 0;
+        margin: 0;
+    }
+}
+
+/* ===== Weight Change Indicators ===== */
+.weight-up {
+    color: var(--danger);
+}
+
+.weight-up::before {
+    content: '↑ ';
+}
+
+.weight-down {
+    color: var(--success);
+}
+
+.weight-down::before {
+    content: '↓ ';
+}
+
+.weight-same {
+    color: var(--warm-gray);
+}
+
+.weight-same::before {
+    content: '→ ';
+}
+
+/* ===== Serving Option Delete Button ===== */
+.remove-serving-btn {
+    color: var(--danger);
+    padding: 0.5rem;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 0.5rem;
+    transition: background var(--transition-fast);
+}
+
+.remove-serving-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+/* ===== Food Selection in Modal ===== */
+.food-select-item {
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: 2px solid transparent;
+}
+
+.food-select-item:hover {
+    background: var(--warm-cream);
+}
+
+.food-select-item.selected {
+    background: rgba(45, 90, 39, 0.1);
+    border-color: var(--deep-green);
+}
+
+/* ===== Focus States for Accessibility ===== */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid var(--deep-green);
+    outline-offset: 2px;
+}
+
+/* ===== Dark Mode Support (Future Enhancement) ===== */
+/* Uncomment to enable dark mode
+@media (prefers-color-scheme: dark) {
+    :root {
+        --off-white: #1a1a1a;
+        --warm-cream: #2d2d2d;
+        --text-dark: #f5f5f5;
+        --warm-gray: #9ca3af;
+    }
+    
+    .bg-white {
+        background-color: #262626;
+    }
+}
+*/
+
