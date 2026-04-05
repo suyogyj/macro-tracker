@@ -122,6 +122,15 @@ async function applyRemotePayload(remotePayload, remoteUpdatedAt) {
             syncIdToLocalId.set(rest.syncId, newId);
         }
 
+        // Logs often reference catalog foods (starter / INDB); those are not in the cloud payload,
+        // but they already exist locally with the same syncId after initializeDatabase + catalog merge.
+        const catalogFoods = await db.foods.filter((x) => x.source !== 'user').toArray();
+        for (const cf of catalogFoods) {
+            if (cf.syncId != null && cf.syncId !== '') {
+                syncIdToLocalId.set(cf.syncId, cf.id);
+            }
+        }
+
         await db.logs.clear();
         for (const log of logs) {
             const fid = syncIdToLocalId.get(log.foodSyncId);
@@ -195,7 +204,7 @@ async function pullFromSupabase(force = false) {
     await applyRemotePayload(data.payload, data.updated_at);
     showToast('Synced from cloud', 'success');
     await loadDayLogs();
-    renderFoodLibrary();
+    renderFoodLibraryFromUi();
 }
 
 async function pushToSupabase() {
@@ -1107,7 +1116,7 @@ async function setupFileStorage() {
         
         // Refresh UI
         loadDayLogs();
-        renderFoodLibrary();
+        renderFoodLibraryFromUi();
         
     } catch (error) {
         if (error.name !== 'AbortError') {
@@ -1207,7 +1216,7 @@ function switchTab(tabName) {
     if (tabName === 'analysis') {
         loadAnalysisData();
     } else if (tabName === 'library') {
-        renderFoodLibrary();
+        renderFoodLibraryFromUi();
     }
 }
 
@@ -1276,6 +1285,27 @@ async function renderFoodLibrary(searchTerm = '', category = 'all') {
         console.error('Error rendering food library:', error);
         foodList.innerHTML = '<p class="text-danger text-center">Error loading foods</p>';
     }
+}
+
+function getLibrarySearchTerm() {
+    return document.getElementById('food-search')?.value?.trim() || '';
+}
+
+function getActiveLibraryCategory() {
+    return document.querySelector('.category-btn.active')?.dataset.category || 'all';
+}
+
+/** Re-render library using the current search box + category chip (keeps UI and list in sync). */
+async function renderFoodLibraryFromUi() {
+    await renderFoodLibrary(getLibrarySearchTerm(), getActiveLibraryCategory());
+}
+
+/** Update category chips; unknown values fall back to All. */
+function setFoodLibraryCategoryFilter(category) {
+    const buttons = document.querySelectorAll('.category-btn');
+    const valid = [...buttons].some((b) => b.dataset.category === category);
+    const cat = valid ? category : 'all';
+    buttons.forEach((b) => b.classList.toggle('active', b.dataset.category === cat));
 }
 
 /**
@@ -1580,11 +1610,19 @@ async function renderModalFoodList(searchTerm = '') {
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             foods = foods.filter(food => food.name.toLowerCase().includes(term));
+            foods.sort((a, b) => a.name.localeCompare(b.name));
+            foods = foods.slice(0, 80);
+        } else {
+            const userFoods = foods
+                .filter((f) => f.source === 'user')
+                .sort((a, b) => a.name.localeCompare(b.name));
+            const catalog = foods
+                .filter((f) => f.source !== 'user')
+                .sort((a, b) => a.name.localeCompare(b.name));
+            foods = [...userFoods, ...catalog.slice(0, 40)];
         }
         
-        foods.sort((a, b) => a.name.localeCompare(b.name));
-        
-        foodList.innerHTML = foods.slice(0, 20).map(food => `
+        foodList.innerHTML = foods.map(food => `
             <div class="food-select-item ${selectedFood?.id === food.id ? 'selected' : ''}" 
                  data-food-id="${food.id}">
                 <div class="font-medium text-sm">${food.name}</div>
@@ -1739,7 +1777,10 @@ async function saveCustomFood(formData) {
         
         showToast('Custom dish created!', 'success');
         closeModals();
-        renderFoodLibrary();
+        const searchEl = document.getElementById('food-search');
+        if (searchEl) searchEl.value = '';
+        setFoodLibraryCategoryFilter(formData.category);
+        await renderFoodLibrary('', formData.category);
         triggerAutoSave(); // Auto-save to file
         
     } catch (error) {
@@ -1807,7 +1848,10 @@ async function updateFood(foodId, formData) {
         
         showToast('Dish updated!', 'success');
         closeModals();
-        renderFoodLibrary();
+        const searchEl = document.getElementById('food-search');
+        if (searchEl) searchEl.value = '';
+        setFoodLibraryCategoryFilter(formData.category);
+        await renderFoodLibrary('', formData.category);
         loadDayLogs();
         triggerAutoSave(); // Auto-save to file
         
@@ -1839,7 +1883,7 @@ async function deleteFood(foodId) {
         
         showToast('Dish deleted', 'success');
         closeModals();
-        renderFoodLibrary();
+        await renderFoodLibraryFromUi();
         loadDayLogs();
         triggerAutoSave(); // Auto-save to file
         
@@ -2318,7 +2362,7 @@ async function importData(file) {
             }
             showToast('Merged custom foods from backup', 'success');
             loadDayLogs();
-            renderFoodLibrary();
+            renderFoodLibraryFromUi();
             scheduleCloudSync();
             return;
         }
@@ -2336,7 +2380,7 @@ async function importData(file) {
 
         showToast('Data imported successfully!', 'success');
         loadDayLogs();
-        renderFoodLibrary();
+        renderFoodLibraryFromUi();
         scheduleCloudSync();
     } catch (error) {
         console.error('Error importing data:', error);
@@ -2379,7 +2423,7 @@ async function resetAllData() {
         showToast('Logs cleared; custom dishes kept; catalog rebuilt', 'success');
         closeModals();
         loadDayLogs();
-        renderFoodLibrary();
+        renderFoodLibraryFromUi();
         triggerAutoSave();
     } catch (error) {
         console.error('Error resetting data:', error);
@@ -2477,6 +2521,15 @@ function setAuthGateMode(mode) {
     setAuthGateStatus('', 'clear');
 }
 
+function withNetworkTimeout(promise, ms, message) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => {
+            setTimeout(() => reject(new Error(message)), ms);
+        })
+    ]);
+}
+
 async function authGateSubmit() {
     const mode =
         document.querySelector('input[name="authGateMode"]:checked')?.value === 'signup' ? 'signup' : 'signin';
@@ -2524,14 +2577,22 @@ async function authGateSubmit() {
         btn.textContent = mode === 'signup' ? 'Creating account…' : 'Signing in…';
     }
 
+    const authTimeoutMs = 45000;
+    const timeoutMsg =
+        'Request timed out. Check your connection, Supabase project status, and that this site URL is allowed in Supabase Auth → URL configuration.';
+
     try {
         if (mode === 'signup') {
             const redirect = window.location.origin + window.location.pathname;
-            const { data, error } = await client.auth.signUp({
-                email,
-                password,
-                options: { emailRedirectTo: redirect }
-            });
+            const { data, error } = await withNetworkTimeout(
+                client.auth.signUp({
+                    email,
+                    password,
+                    options: { emailRedirectTo: redirect }
+                }),
+                authTimeoutMs,
+                timeoutMsg
+            );
             if (error) {
                 setAuthGateStatus(error.message, 'error');
                 showToast(error.message, 'error');
@@ -2540,6 +2601,7 @@ async function authGateSubmit() {
             if (data.session) {
                 setAuthGateStatus('Account created. Loading your data…', 'success');
                 showToast('Signed in', 'success');
+                await ensureAppBooted(data.session);
             } else {
                 setAuthGateStatus(
                     'Account created. Check your email to confirm, then use Sign in below.',
@@ -2551,13 +2613,24 @@ async function authGateSubmit() {
             return;
         }
 
-        const { error } = await client.auth.signInWithPassword({ email, password });
+        const { data: signInData, error } = await withNetworkTimeout(
+            client.auth.signInWithPassword({ email, password }),
+            authTimeoutMs,
+            timeoutMsg
+        );
         if (error) {
             setAuthGateStatus(error.message, 'error');
             showToast(error.message, 'error');
             return;
         }
-        setAuthGateStatus('Success. Loading…', 'success');
+        const session = signInData?.session;
+        if (session?.user) {
+            setAuthGateStatus('Loading your data…', 'success');
+            await ensureAppBooted(session);
+        } else {
+            setAuthGateStatus('Signed in but no session returned. Try again or confirm your email.', 'error');
+            showToast('No session after sign-in', 'warning');
+        }
     } catch (err) {
         console.error('authGateSubmit', err);
         const msg = err?.message || String(err);
@@ -2726,9 +2799,9 @@ function bindMainAppListeners() {
         addServingOptionRow(document.getElementById('serving-options-list'));
     });
 
-    document.getElementById('custom-food-form').addEventListener('submit', (e) => {
+    document.getElementById('custom-food-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        saveCustomFood({
+        await saveCustomFood({
             name: document.getElementById('custom-name').value.trim(),
             category: document.getElementById('custom-category').value,
             calories: parseFloat(document.getElementById('custom-calories').value),
@@ -2791,6 +2864,19 @@ function bindMainAppListeners() {
         if (document.visibilityState !== 'hidden' || !db) return;
         const client = getSupabase();
         if (!client) return;
+        client.auth.getSession().then(({ data: { session } }) => {
+            if (session) pushToSupabase();
+        });
+    });
+
+    window.addEventListener('pagehide', () => {
+        if (!db) return;
+        const client = getSupabase();
+        if (!client) return;
+        if (syncDebounceTimer) {
+            clearTimeout(syncDebounceTimer);
+            syncDebounceTimer = null;
+        }
         client.auth.getSession().then(({ data: { session } }) => {
             if (session) pushToSupabase();
         });
