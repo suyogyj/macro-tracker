@@ -61,15 +61,31 @@
             </div>
 
             <div id="auth-gate-form" class="bg-white/10 backdrop-blur rounded-2xl p-6 text-left">
+                <div class="flex rounded-xl overflow-hidden mb-4 bg-black/20 p-0.5">
+                    <button type="button" id="auth-gate-tab-signin" class="auth-gate-tab flex-1 py-2 text-sm font-semibold rounded-lg bg-white text-deep-green transition-colors">
+                        Sign in
+                    </button>
+                    <button type="button" id="auth-gate-tab-signup" class="auth-gate-tab flex-1 py-2 text-sm font-semibold rounded-lg text-green-100 transition-colors">
+                        Create account
+                    </button>
+                </div>
                 <label class="block text-sm font-medium text-green-100 mb-2">Email</label>
                 <input type="email" id="auth-gate-email" autocomplete="email" placeholder="you@example.com"
-                    class="w-full px-4 py-3 rounded-xl text-gray-900 border-0 focus:ring-2 focus:ring-saffron mb-4">
-                <button type="button" id="auth-gate-submit-btn"
+                    class="w-full px-4 py-3 rounded-xl text-gray-900 border-0 focus:ring-2 focus:ring-saffron mb-3">
+                <label class="block text-sm font-medium text-green-100 mb-2">Password</label>
+                <input type="password" id="auth-gate-password" autocomplete="current-password" placeholder="••••••••"
+                    class="w-full px-4 py-3 rounded-xl text-gray-900 border-0 focus:ring-2 focus:ring-saffron mb-3">
+                <div id="auth-gate-confirm-wrap" class="hidden">
+                    <label class="block text-sm font-medium text-green-100 mb-2">Confirm password</label>
+                    <input type="password" id="auth-gate-password-confirm" autocomplete="new-password" placeholder="••••••••"
+                        class="w-full px-4 py-3 rounded-xl text-gray-900 border-0 focus:ring-2 focus:ring-saffron mb-3">
+                </div>
+                <button type="button" id="auth-gate-primary-btn"
                     class="w-full bg-saffron hover:bg-saffron-dark text-white font-semibold py-3 rounded-xl transition-colors">
-                    Continue with email
+                    Sign in
                 </button>
-                <p class="text-xs text-green-200/90 mt-4 text-center">
-                    First time here? We’ll create your account when you open the link. Returning? Same link signs you in.
+                <p id="auth-gate-hint" class="text-xs text-green-200/90 mt-4 text-center">
+                    Use the same email and password each visit. No inbox required.
                 </p>
             </div>
         </div>

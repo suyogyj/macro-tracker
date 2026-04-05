@@ -1,6 +1,6 @@
 # Macro Tracker (Indian Food Edition)
 
-Static web app: you **must sign in** with email (Supabase magic link) before using the tracker. Each account gets **separate IndexedDB** storage on the device (`MacroTracker_<userId>`) plus its own row in Supabase, so two people can share one browser by signing out and signing in. Includes **1014+ INDB foods** from `data/indb-foods.json`.
+Static web app: you **must sign in** with **email and password** (Supabase Auth) before using the tracker. Each account gets **separate IndexedDB** storage on the device (`MacroTracker_<userId>`) plus its own row in Supabase, so two people can share one browser by signing out and signing in. Includes **1014+ INDB foods** from `data/indb-foods.json`.
 
 ## Run locally
 
@@ -57,9 +57,12 @@ This creates `public.user_data` with `user_id`, `payload` (JSON), `updated_at`, 
    `https://<user>.github.io/macro_tracker/`  
    and your local dev URL.
 
-### 5. Email (magic link) and sign-ups
+### 5. Email + password
 
-Under **Authentication** → **Providers** → **Email**, keep **Email** enabled. Ensure **“Confirm email”** / signup settings match how you want first-time users to join (magic link creates the user on first use if sign-ups are allowed). On the free tier, use Supabase’s built-in mail or connect **SMTP** / **Resend** in **Project Settings** → **Auth** for more reliable delivery.
+Under **Authentication** → **Providers** → **Email**, keep **Email** enabled. Password sign-in uses Supabase’s built-in **email + password** (there is no separate “username” field unless you add profiles later—**email is the login id**).
+
+- **Confirm email**: if turned on, new users must click the confirmation link before `Sign in` works. For personal projects you can disable confirmation under **Authentication** → **Providers** → **Email** (or **Auth** settings) so sign-up logs them in immediately.
+- For reliable mail (confirmation / reset), configure **SMTP** or **Resend** under **Project Settings** → **Auth**.
 
 ### 6. Configure the app
 
@@ -76,9 +79,8 @@ The **anon** key is designed to be public in the browser; access is restricted b
 
 ### 7. Sign-in flow (every visit)
 
-1. Open the site → you see the **sign-in screen** until you authenticate.
-2. Enter email → **Continue with email** → open the magic link. First-time addresses register automatically (if your project allows email sign-ups).
-3. After login, the app opens. **Settings → Sign out** lets another person use the same device with their own data.
+1. Open the site → **Sign in** with email + password, or **Create account** for a new user (same form, different tab).
+2. After login, the app opens. **Settings → Sign out** lets another person use the same device with their own data.
 
 Sync: pulls when you sign in (when safe), pushes after edits (debounced) and when you leave the tab. **Pull from cloud** overwrites local synced data with the server copy.
 

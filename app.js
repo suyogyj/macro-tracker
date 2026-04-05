@@ -2412,24 +2412,81 @@ function updateAuthUI(session) {
     if (emailEl) emailEl.textContent = session?.user?.email || '—';
 }
 
-async function sendMagicLinkFromGate() {
-    const email = document.getElementById('auth-gate-email')?.value.trim();
-    if (!email) {
-        showToast('Enter your email', 'warning');
-        return;
+/** 'signin' | 'signup' */
+let authGateMode = 'signin';
+
+function setAuthGateMode(mode) {
+    authGateMode = mode;
+    const signinTab = document.getElementById('auth-gate-tab-signin');
+    const signupTab = document.getElementById('auth-gate-tab-signup');
+    const confirmWrap = document.getElementById('auth-gate-confirm-wrap');
+    const primaryBtn = document.getElementById('auth-gate-primary-btn');
+    const pwd = document.getElementById('auth-gate-password');
+    const hint = document.getElementById('auth-gate-hint');
+
+    const active = 'flex-1 py-2 text-sm font-semibold rounded-lg bg-white text-deep-green transition-colors';
+    const inactive = 'flex-1 py-2 text-sm font-semibold rounded-lg text-green-100 transition-colors';
+
+    if (mode === 'signin') {
+        signinTab.className = active;
+        signupTab.className = inactive;
+        confirmWrap?.classList.add('hidden');
+        primaryBtn.textContent = 'Sign in';
+        if (pwd) pwd.autocomplete = 'current-password';
+        if (hint) hint.textContent = 'Use the same email and password each visit. No inbox required.';
+    } else {
+        signupTab.className = active;
+        signinTab.className = inactive;
+        confirmWrap?.classList.remove('hidden');
+        primaryBtn.textContent = 'Create account';
+        if (pwd) pwd.autocomplete = 'new-password';
+        if (hint) hint.textContent = 'Choose a strong password. If your project requires email confirmation, check your inbox after signing up.';
     }
+}
+
+async function authGatePrimaryAction() {
+    const email = document.getElementById('auth-gate-email')?.value.trim();
+    const password = document.getElementById('auth-gate-password')?.value ?? '';
     const client = getSupabase();
     if (!client) {
         showToast('Configure Supabase in config.js', 'warning');
         return;
     }
-    const redirect = window.location.origin + window.location.pathname;
-    const { error } = await client.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: redirect }
-    });
+    if (!email) {
+        showToast('Enter your email', 'warning');
+        return;
+    }
+    if (!password || password.length < 6) {
+        showToast('Password must be at least 6 characters', 'warning');
+        return;
+    }
+
+    if (authGateMode === 'signup') {
+        const confirm = document.getElementById('auth-gate-password-confirm')?.value ?? '';
+        if (password !== confirm) {
+            showToast('Passwords do not match', 'warning');
+            return;
+        }
+        const redirect = window.location.origin + window.location.pathname;
+        const { data, error } = await client.auth.signUp({
+            email,
+            password,
+            options: { emailRedirectTo: redirect }
+        });
+        if (error) {
+            showToast(error.message, 'error');
+            return;
+        }
+        if (data.session) {
+            showToast('Account created — you are signed in', 'success');
+        } else {
+            showToast('Check your email to confirm your account, then sign in here', 'success');
+        }
+        return;
+    }
+
+    const { error } = await client.auth.signInWithPassword({ email, password });
     if (error) showToast(error.message, 'error');
-    else showToast('Check your email for the link to sign in', 'success');
 }
 
 async function handleSignedOut() {
@@ -2657,13 +2714,18 @@ function bindMainAppListeners() {
 document.addEventListener('DOMContentLoaded', async () => {
     updateSupabaseConfigHint();
 
-    document.getElementById('auth-gate-submit-btn')?.addEventListener('click', sendMagicLinkFromGate);
-    document.getElementById('auth-gate-email')?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            sendMagicLinkFromGate();
-        }
+    document.getElementById('auth-gate-tab-signin')?.addEventListener('click', () => setAuthGateMode('signin'));
+    document.getElementById('auth-gate-tab-signup')?.addEventListener('click', () => setAuthGateMode('signup'));
+    document.getElementById('auth-gate-primary-btn')?.addEventListener('click', authGatePrimaryAction);
+    ['auth-gate-email', 'auth-gate-password', 'auth-gate-password-confirm'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                authGatePrimaryAction();
+            }
+        });
     });
+    setAuthGateMode('signin');
 
     const sb = getSupabase();
     if (!sb) {
