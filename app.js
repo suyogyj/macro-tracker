@@ -27,52 +27,42 @@ function mapStarterFoodForSeed(f) {
 }
 
 /**
- * Initialize Dexie database with all required tables
+ * Per-user IndexedDB (separate data for each Supabase account on this device).
+ * Legacy DB name `MacroTrackerDB` is no longer used after auth became required.
  */
-const db = new Dexie('MacroTrackerDB');
+let db = null;
+let activeAuthUserId = null;
 
-db.version(1).stores({
-    foods: '++id, name, category',
-    logs: '++id, date, foodId, mealType',
-    userSettings: 'id',
-    weightLogs: '++id, date'
-});
+function createDexieForUser(userId) {
+    const safeId = String(userId).replace(/[^a-zA-Z0-9-]/g, '');
+    const d = new Dexie(`MacroTracker_${safeId}`);
+    d.version(2).stores({
+        foods: '++id, name, category, source, externalKey, syncId',
+        logs: '++id, date, foodId, mealType, foodSyncId',
+        userSettings: 'id',
+        weightLogs: '++id, date',
+        meta: 'key'
+    });
+    return d;
+}
 
-db.version(2).stores({
-    foods: '++id, name, category, source, externalKey, syncId',
-    logs: '++id, date, foodId, mealType, foodSyncId',
-    userSettings: 'id',
-    weightLogs: '++id, date',
-    meta: 'key'
-}).upgrade(async (tx) => {
-    const foodRows = await tx.table('foods').toArray();
-    for (const f of foodRows) {
-        const source = f.source || (f.isDefault ? 'starter' : 'user');
-        let externalKey = f.externalKey;
-        let syncId = f.syncId;
-        if (!externalKey) {
-            if (source === 'starter') externalKey = starterKey(f.name);
-            else if (source === 'user') externalKey = `user:legacy:${f.id}`;
-            else externalKey = `food:legacy:${f.id}`;
-        }
-        if (!syncId) {
-            if (source === 'starter') syncId = starterKey(f.name);
-            else if (source === 'user') syncId = `user:legacy:${f.id}`;
-            else syncId = externalKey;
-        }
-        await tx.table('foods').update(f.id, { source, externalKey, syncId });
+async function openDatabaseForUser(userId) {
+    if (activeAuthUserId === userId && db) return db;
+    if (db) {
+        await db.close();
+        db = null;
     }
-    const foods2 = await tx.table('foods').toArray();
-    const byId = new Map(foods2.map((x) => [x.id, x]));
-    const logRows = await tx.table('logs').toArray();
-    for (const log of logRows) {
-        const food = byId.get(log.foodId);
-        const foodSyncId = food?.syncId ?? null;
-        await tx.table('logs').update(log.id, { foodSyncId });
-    }
-    await tx.table('meta').put({ key: 'catalogBundleVersion', value: 0 });
-    await tx.table('meta').put({ key: 'cloudSyncCursor', value: null });
-});
+    db = createDexieForUser(userId);
+    activeAuthUserId = userId;
+    await db.open();
+    return db;
+}
+
+async function closeUserDatabase() {
+    if (db) await db.close();
+    db = null;
+    activeAuthUserId = null;
+}
 
 // ===== SUPABASE (optional; config.js) =====
 let supabaseClient = null;
@@ -89,6 +79,9 @@ function getSupabase() {
 }
 
 let syncDebounceTimer = null;
+let mainAppListenersBound = false;
+let appBootPromise = null;
+let lastBootedUserId = null;
 
 async function buildSyncPayload() {
     const userFoods = await db.foods.filter((f) => f.source === 'user').toArray();
@@ -169,6 +162,7 @@ async function applyRemotePayload(remotePayload, remoteUpdatedAt) {
 }
 
 async function pullFromSupabase(force = false) {
+    if (!db) return;
     const client = getSupabase();
     if (!client) return;
     const { data: { session } } = await client.auth.getSession();
@@ -205,6 +199,7 @@ async function pullFromSupabase(force = false) {
 }
 
 async function pushToSupabase() {
+    if (!db) return;
     const client = getSupabase();
     if (!client) return;
     const { data: { session } } = await client.auth.getSession();
@@ -229,6 +224,7 @@ async function pushToSupabase() {
 }
 
 function scheduleCloudSync() {
+    if (!db) return;
     const client = getSupabase();
     if (!client) return;
     if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
@@ -682,6 +678,13 @@ let charts = {
     macroPie: null,
     calorieTrend: null
 };
+
+function destroyCharts() {
+    Object.keys(charts).forEach((k) => {
+        if (charts[k]?.destroy) charts[k].destroy();
+        charts[k] = null;
+    });
+}
 
 // File System Access API state
 let fileHandle = null;
@@ -2384,32 +2387,40 @@ async function resetAllData() {
     }
 }
 
-// ===== SUPABASE UI =====
+// ===== AUTH GATE & SUPABASE UI =====
+
+function showMainAppUI() {
+    document.getElementById('auth-gate')?.classList.add('hidden');
+    document.getElementById('app')?.classList.remove('hidden');
+}
+
+function showAuthGateOnly() {
+    document.getElementById('auth-gate')?.classList.remove('hidden');
+    document.getElementById('app')?.classList.add('hidden');
+}
 
 function updateSupabaseConfigHint() {
-    const hint = document.getElementById('supabase-config-hint');
     const cfg = window.MACRO_TRACKER_CONFIG;
     const ok = cfg?.supabaseUrl && cfg?.supabaseAnonKey;
-    hint?.classList.toggle('hidden', !!ok);
+    document.getElementById('supabase-config-hint')?.classList.toggle('hidden', !!ok);
+    document.getElementById('auth-gate-form')?.classList.toggle('hidden', !ok);
+    document.getElementById('auth-gate-config-missing')?.classList.toggle('hidden', !!ok);
 }
 
 function updateAuthUI(session) {
-    const signed = !!session;
-    document.getElementById('supabase-auth-signed-out')?.classList.toggle('hidden', signed);
-    document.getElementById('supabase-auth-signed-in')?.classList.toggle('hidden', !signed);
     const emailEl = document.getElementById('supabase-user-email');
-    if (emailEl && session?.user?.email) emailEl.textContent = session.user.email;
+    if (emailEl) emailEl.textContent = session?.user?.email || '—';
 }
 
-async function sendMagicLink() {
-    const email = document.getElementById('supabase-email')?.value.trim();
+async function sendMagicLinkFromGate() {
+    const email = document.getElementById('auth-gate-email')?.value.trim();
     if (!email) {
         showToast('Enter your email', 'warning');
         return;
     }
     const client = getSupabase();
     if (!client) {
-        showToast('Add Supabase keys in config.js', 'warning');
+        showToast('Configure Supabase in config.js', 'warning');
         return;
     }
     const redirect = window.location.origin + window.location.pathname;
@@ -2418,16 +2429,71 @@ async function sendMagicLink() {
         options: { emailRedirectTo: redirect }
     });
     if (error) showToast(error.message, 'error');
-    else showToast('Check your email for the login link', 'success');
+    else showToast('Check your email for the link to sign in', 'success');
+}
+
+async function handleSignedOut() {
+    lastBootedUserId = null;
+    destroyCharts();
+    selectedFood = null;
+    closeModals();
+    await closeUserDatabase();
+    showAuthGateOnly();
+}
+
+async function refreshMainAppData() {
+    selectedDate = getTodayDate();
+    const datePicker = document.getElementById('date-picker');
+    if (datePicker) {
+        datePicker.value = selectedDate;
+        datePicker.max = selectedDate;
+    }
+    const headerDate = document.getElementById('header-date');
+    if (headerDate) headerDate.textContent = 'Today';
+    await loadDayLogs();
+    updateDateDisplay();
+    switchTab('today');
+    updateStorageStatusUI();
+}
+
+async function ensureAppBooted(session) {
+    const uid = session.user.id;
+    if (lastBootedUserId === uid && db && mainAppListenersBound) {
+        updateAuthUI(session);
+        return;
+    }
+    if (!appBootPromise) {
+        appBootPromise = (async () => {
+            await openDatabaseForUser(uid);
+            await initializeDatabase();
+            await pullFromSupabase(false);
+            scheduleCloudSync();
+            showMainAppUI();
+            if (!mainAppListenersBound) {
+                bindMainAppListeners();
+                mainAppListenersBound = true;
+            }
+            await refreshMainAppData();
+            lastBootedUserId = uid;
+            const { data: { session: s } } = await getSupabase().auth.getSession();
+            updateAuthUI(s);
+        })().finally(() => {
+            appBootPromise = null;
+        });
+    }
+    return appBootPromise;
 }
 
 async function signOutSupabase() {
-    await getSupabase()?.auth.signOut();
-    updateAuthUI(null);
     updateSyncStatusUI('', false);
+    await getSupabase()?.auth.signOut();
 }
 
 async function syncNowToCloud() {
+    if (!db) {
+        showToast('Sign in first', 'warning');
+        return;
+    }
     const client = getSupabase();
     if (!client) {
         showToast('Configure config.js first', 'warning');
@@ -2443,6 +2509,10 @@ async function syncNowToCloud() {
 }
 
 async function forcePullFromCloud() {
+    if (!db) {
+        showToast('Sign in first', 'warning');
+        return;
+    }
     const client = getSupabase();
     if (!client) {
         showToast('Configure config.js first', 'warning');
@@ -2459,112 +2529,60 @@ async function forcePullFromCloud() {
 
 // ===== EVENT LISTENERS =====
 
-document.addEventListener('DOMContentLoaded', async () => {
-    updateSupabaseConfigHint();
-
-    const sb = getSupabase();
-    if (sb) {
-        sb.auth.onAuthStateChange(async (event, session) => {
-            updateAuthUI(session);
-            if (event === 'SIGNED_IN' && session) {
-                await pullFromSupabase(false);
-                scheduleCloudSync();
-            }
-            if (event === 'SIGNED_OUT') updateSyncStatusUI('', false);
-        });
-        const { data: { session } } = await sb.auth.getSession();
-        updateAuthUI(session);
-    }
-
-    // Initialize database
-    await initializeDatabase();
-    
-    // Initialize selected date
-    selectedDate = getTodayDate();
-    
-    // Set header date
-    document.getElementById('header-date').textContent = 'Today';
-    
-    // Initialize date picker
-    const datePicker = document.getElementById('date-picker');
-    if (datePicker) {
-        datePicker.value = selectedDate;
-        datePicker.max = selectedDate; // Can't select future dates
-    }
-    
-    // Load selected day's data
-    await loadDayLogs();
-    updateDateDisplay();
-    
-    // Set default tab
-    switchTab('today');
-    
-    // Tab navigation
-    document.querySelectorAll('.tab-btn').forEach(btn => {
+function bindMainAppListeners() {
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
-    
-    // Date navigation
+
     document.getElementById('prev-day-btn')?.addEventListener('click', goToPreviousDay);
     document.getElementById('next-day-btn')?.addEventListener('click', goToNextDay);
     document.getElementById('go-to-today-btn')?.addEventListener('click', goToToday);
     document.getElementById('date-picker')?.addEventListener('change', (e) => setDate(e.target.value));
-    
-    // Add food buttons
-    document.querySelectorAll('.add-food-btn').forEach(btn => {
+
+    document.querySelectorAll('.add-food-btn').forEach((btn) => {
         btn.addEventListener('click', () => openAddFoodModal(btn.dataset.meal));
     });
-    
-    // Modal close buttons
-    document.querySelectorAll('.close-modal').forEach(btn => {
+
+    document.querySelectorAll('.close-modal').forEach((btn) => {
         btn.addEventListener('click', closeModals);
     });
-    
-    // Click outside modal to close
-    document.querySelectorAll('.modal').forEach(modal => {
+
+    document.querySelectorAll('.modal').forEach((modal) => {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) closeModals();
         });
     });
-    
-    // Modal food search
+
     const modalSearch = document.getElementById('modal-food-search');
     modalSearch.addEventListener('input', debounce((e) => {
         renderModalFoodList(e.target.value);
     }, 300));
-    
-    // Food quantity/unit change
+
     document.getElementById('food-quantity').addEventListener('input', updateCalculatedMacros);
     document.getElementById('food-unit').addEventListener('change', updateCalculatedMacros);
-    
-    // Confirm add food
+
     document.getElementById('confirm-add-food').addEventListener('click', confirmAddFood);
-    
-    // Library search
+
     const librarySearch = document.getElementById('food-search');
     librarySearch.addEventListener('input', debounce((e) => {
         const activeCategory = document.querySelector('.category-btn.active')?.dataset.category || 'all';
         renderFoodLibrary(e.target.value, activeCategory);
     }, 300));
-    
-    // Category filters
-    document.querySelectorAll('.category-btn').forEach(btn => {
+
+    document.querySelectorAll('.category-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.category-btn').forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
             renderFoodLibrary(librarySearch.value, btn.dataset.category);
         });
     });
-    
-    // Add custom food button
+
     document.getElementById('add-custom-food-btn').addEventListener('click', openCustomFoodModal);
-    
-    // Add serving option
+
     document.getElementById('add-serving-option').addEventListener('click', () => {
         addServingOptionRow(document.getElementById('serving-options-list'));
     });
-    
-    // Custom food form submit
+
     document.getElementById('custom-food-form').addEventListener('submit', (e) => {
         e.preventDefault();
         saveCustomFood({
@@ -2576,15 +2594,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             fats: parseFloat(document.getElementById('custom-fats').value)
         });
     });
-    
-    // Edit food form
+
     document.getElementById('edit-add-serving-option').addEventListener('click', () => {
         addServingOptionRow(document.getElementById('edit-serving-options-list'));
     });
-    
+
     document.getElementById('edit-food-form').addEventListener('submit', (e) => {
         e.preventDefault();
-        const foodId = parseInt(document.getElementById('edit-food-id').value);
+        const foodId = parseInt(document.getElementById('edit-food-id').value, 10);
         updateFood(foodId, {
             name: document.getElementById('edit-name').value.trim(),
             category: document.getElementById('edit-category').value,
@@ -2594,55 +2611,78 @@ document.addEventListener('DOMContentLoaded', async () => {
             fats: parseFloat(document.getElementById('edit-fats').value)
         });
     });
-    
+
     document.getElementById('delete-food-btn').addEventListener('click', () => {
-        const foodId = parseInt(document.getElementById('edit-food-id').value);
+        const foodId = parseInt(document.getElementById('edit-food-id').value, 10);
         deleteFood(foodId);
     });
-    
-    // Weight tracking
+
     document.getElementById('log-weight-btn').addEventListener('click', openWeightModal);
     document.getElementById('save-weight-btn').addEventListener('click', saveWeight);
-    
-    // Settings
+
     document.getElementById('save-goals-btn').addEventListener('click', saveGoals);
     document.getElementById('export-data-btn').addEventListener('click', exportData);
-    
+
     document.getElementById('import-data-input').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             importData(file);
-            e.target.value = ''; // Reset input
+            e.target.value = '';
         }
     });
-    
-    // File storage buttons
+
     document.getElementById('set-storage-file-btn').addEventListener('click', setupFileStorage);
     document.getElementById('disconnect-storage-btn').addEventListener('click', disconnectFileStorage);
-    
-    // Initialize storage status UI
-    updateStorageStatusUI();
-    
-    // Reset data
+
     document.getElementById('reset-data-btn').addEventListener('click', () => {
         document.getElementById('confirm-reset-modal').classList.add('show');
     });
-    
+
     document.getElementById('confirm-reset-btn').addEventListener('click', resetAllData);
 
-    document.getElementById('supabase-magic-link-btn')?.addEventListener('click', sendMagicLink);
     document.getElementById('supabase-sign-out-btn')?.addEventListener('click', signOutSupabase);
     document.getElementById('supabase-sync-now-btn')?.addEventListener('click', syncNowToCloud);
     document.getElementById('supabase-pull-btn')?.addEventListener('click', forcePullFromCloud);
 
     document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState !== 'hidden') return;
+        if (document.visibilityState !== 'hidden' || !db) return;
         const client = getSupabase();
         if (!client) return;
         client.auth.getSession().then(({ data: { session } }) => {
             if (session) pushToSupabase();
         });
     });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    updateSupabaseConfigHint();
+
+    document.getElementById('auth-gate-submit-btn')?.addEventListener('click', sendMagicLinkFromGate);
+    document.getElementById('auth-gate-email')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sendMagicLinkFromGate();
+        }
+    });
+
+    const sb = getSupabase();
+    if (!sb) {
+        showAuthGateOnly();
+        console.warn('Macro Tracker: configure Supabase in config.js');
+        return;
+    }
+
+    sb.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'TOKEN_REFRESHED') return;
+        if (session?.user) await ensureAppBooted(session);
+        else await handleSignedOut();
+        updateAuthUI(session);
+    });
+
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.user) await ensureAppBooted(session);
+    else await handleSignedOut();
+    updateAuthUI(session);
 
     console.log('Macro Tracker initialized successfully!');
 });

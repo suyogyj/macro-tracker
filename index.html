@@ -49,8 +49,34 @@
     </script>
 </head>
 <body class="bg-off-white font-sans text-gray-800 min-h-screen">
+    <!-- Auth gate: required before app (each user gets separate IndexedDB + Supabase row) -->
+    <div id="auth-gate" class="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-gradient-to-b from-deep-green to-deep-green-dark text-white">
+        <div class="max-w-md w-full text-center">
+            <h1 class="font-display text-3xl font-bold mb-2">Macro Tracker</h1>
+            <p class="text-green-200 text-sm mb-8">Indian Food Edition · Sign in or create an account</p>
+
+            <div id="auth-gate-config-missing" class="hidden bg-white/10 rounded-2xl p-4 mb-6 text-left text-sm text-green-100">
+                <p class="font-semibold text-white mb-2">Supabase is not configured</p>
+                <p>Add <code class="bg-black/20 px-1 rounded">supabaseUrl</code> and <code class="bg-black/20 px-1 rounded">supabaseAnonKey</code> in <code class="bg-black/20 px-1 rounded">config.js</code>, then reload. See README for setup.</p>
+            </div>
+
+            <div id="auth-gate-form" class="bg-white/10 backdrop-blur rounded-2xl p-6 text-left">
+                <label class="block text-sm font-medium text-green-100 mb-2">Email</label>
+                <input type="email" id="auth-gate-email" autocomplete="email" placeholder="you@example.com"
+                    class="w-full px-4 py-3 rounded-xl text-gray-900 border-0 focus:ring-2 focus:ring-saffron mb-4">
+                <button type="button" id="auth-gate-submit-btn"
+                    class="w-full bg-saffron hover:bg-saffron-dark text-white font-semibold py-3 rounded-xl transition-colors">
+                    Continue with email
+                </button>
+                <p class="text-xs text-green-200/90 mt-4 text-center">
+                    First time here? We’ll create your account when you open the link. Returning? Same link signs you in.
+                </p>
+            </div>
+        </div>
+    </div>
+
     <!-- App Container -->
-    <div id="app" class="max-w-2xl mx-auto pb-24 md:pb-8">
+    <div id="app" class="hidden max-w-2xl mx-auto pb-24 md:pb-8">
         
         <!-- Header -->
         <header class="sticky top-0 z-40 bg-deep-green text-white px-4 py-4 shadow-lg">
@@ -363,37 +389,22 @@
                 
                 <!-- Cloud sync (Supabase) -->
                 <div id="cloud-sync-card" class="bg-white rounded-2xl p-5 shadow-md mb-6">
-                    <h2 class="font-display text-xl font-semibold text-deep-green mb-4">Cloud sync</h2>
-                    <p class="text-warm-gray text-sm mb-4">Sign in with email (magic link) to back up logs, custom foods, goals, and weight on <strong>Supabase</strong>. Data syncs automatically after you make changes.</p>
-
-                    <div id="supabase-auth-signed-out" class="space-y-3">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input type="email" id="supabase-email" placeholder="you@example.com"
-                                class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-deep-green">
-                        </div>
-                        <button type="button" id="supabase-magic-link-btn" class="w-full bg-deep-green text-white py-3 rounded-xl font-semibold hover:bg-deep-green-dark transition-colors">
-                            Send magic link
+                    <h2 class="font-display text-xl font-semibold text-deep-green mb-4">Account &amp; cloud sync</h2>
+                    <p class="text-sm text-warm-gray mb-3">Signed in as <span id="supabase-user-email" class="font-medium text-gray-800">—</span></p>
+                    <p class="text-warm-gray text-sm mb-4">Your data is stored in this browser for your account and backed up to Supabase. Another person can use this app on the same device by signing out first — each account has its own data.</p>
+                    <div class="flex flex-col sm:flex-row gap-2 mb-3">
+                        <button type="button" id="supabase-sync-now-btn" class="flex-1 bg-saffron text-white py-2.5 rounded-xl font-semibold hover:bg-saffron-dark transition-colors">
+                            Save to cloud now
+                        </button>
+                        <button type="button" id="supabase-pull-btn" class="flex-1 bg-gray-100 text-gray-800 py-2.5 rounded-xl font-semibold hover:bg-gray-200 transition-colors">
+                            Pull from cloud
                         </button>
                     </div>
-
-                    <div id="supabase-auth-signed-in" class="hidden space-y-3">
-                        <p class="text-sm text-warm-gray">Signed in as <span id="supabase-user-email" class="font-medium text-gray-800"></span></p>
-                        <div class="flex flex-col sm:flex-row gap-2">
-                            <button type="button" id="supabase-sync-now-btn" class="flex-1 bg-saffron text-white py-2.5 rounded-xl font-semibold hover:bg-saffron-dark transition-colors">
-                                Save to cloud now
-                            </button>
-                            <button type="button" id="supabase-pull-btn" class="flex-1 bg-gray-100 text-gray-800 py-2.5 rounded-xl font-semibold hover:bg-gray-200 transition-colors">
-                                Pull from cloud
-                            </button>
-                        </div>
-                        <button type="button" id="supabase-sign-out-btn" class="w-full text-sm text-warm-gray hover:text-gray-800 py-2">
-                            Sign out
-                        </button>
-                    </div>
-
+                    <button type="button" id="supabase-sign-out-btn" class="w-full text-sm text-warm-gray hover:text-gray-800 py-2 border border-gray-200 rounded-xl">
+                        Sign out (switch user)
+                    </button>
                     <p id="sync-status-text" class="text-xs text-warm-gray mt-3"></p>
-                    <p id="supabase-config-hint" class="text-xs text-amber-700 mt-2 hidden">Add <code class="bg-amber-50 px-1 rounded">supabaseUrl</code> and <code class="bg-amber-50 px-1 rounded">supabaseAnonKey</code> in <code class="bg-amber-50 px-1 rounded">config.js</code> to enable cloud sync.</p>
+                    <p id="supabase-config-hint" class="text-xs text-amber-700 mt-2 hidden">Add <code class="bg-amber-50 px-1 rounded">supabaseUrl</code> and <code class="bg-amber-50 px-1 rounded">supabaseAnonKey</code> in <code class="bg-amber-50 px-1 rounded">config.js</code>.</p>
                 </div>
 
                 <!-- Daily Goals -->
@@ -493,7 +504,7 @@
                 <div class="mt-8 text-center text-warm-gray text-sm">
                     <p>Macro Tracker - Indian Food Edition</p>
                     <p>Version 1.0 | Local-First App</p>
-                    <p class="mt-2">All data stored locally in your browser</p>
+                    <p class="mt-2">Each account has its own data in this browser, synced to your Supabase project</p>
                 </div>
             </section>
         </main>
