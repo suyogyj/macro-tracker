@@ -83,11 +83,11 @@
                     </fieldset>
 
                     <label for="auth-gate-email" class="block text-sm font-medium text-green-100 mb-2">Email</label>
-                    <input type="email" id="auth-gate-email" name="email" required autocomplete="email" placeholder="you@example.com"
+                    <input type="email" id="auth-gate-email" name="email" autocomplete="email" placeholder="you@example.com"
                         class="w-full px-4 py-3 rounded-xl text-gray-900 border-0 focus:ring-2 focus:ring-saffron mb-3">
 
                     <label for="auth-gate-password" class="block text-sm font-medium text-green-100 mb-2">Password</label>
-                    <input type="password" id="auth-gate-password" name="password" required minlength="6" autocomplete="current-password" placeholder="At least 6 characters"
+                    <input type="password" id="auth-gate-password" name="password" autocomplete="current-password" placeholder="At least 6 characters"
                         class="w-full px-4 py-3 rounded-xl text-gray-900 border-0 focus:ring-2 focus:ring-saffron mb-3">
 
                     <div id="auth-gate-confirm-wrap" class="hidden" aria-hidden="true">
@@ -98,7 +98,7 @@
 
                     <p id="auth-gate-status" class="text-sm mb-3 min-h-[1.25rem] rounded-lg px-2 py-1" role="status" aria-live="polite"></p>
 
-                    <button type="submit" id="auth-gate-primary-btn"
+                    <button type="submit" id="auth-gate-primary-btn" formnovalidate
                         class="w-full bg-saffron hover:bg-saffron-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors">
                         Sign in
                     </button>

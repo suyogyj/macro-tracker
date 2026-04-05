@@ -2463,7 +2463,7 @@ function setAuthGateMode(mode) {
     } else {
         confirmWrap?.classList.remove('hidden');
         confirmWrap?.setAttribute('aria-hidden', 'false');
-        confirmInput?.setAttribute('required', '');
+        confirmInput?.removeAttribute('required');
         if (primaryBtn) primaryBtn.textContent = 'Create account';
         if (pwd) {
             pwd.autocomplete = 'new-password';
@@ -2478,6 +2478,10 @@ function setAuthGateMode(mode) {
 }
 
 async function authGateSubmit() {
+    const mode =
+        document.querySelector('input[name="authGateMode"]:checked')?.value === 'signup' ? 'signup' : 'signin';
+    authGateMode = mode;
+
     const email = document.getElementById('auth-gate-email')?.value.trim();
     const password = document.getElementById('auth-gate-password')?.value ?? '';
     const client = getSupabase();
@@ -2501,8 +2505,13 @@ async function authGateSubmit() {
         return;
     }
 
-    if (authGateMode === 'signup') {
+    if (mode === 'signup') {
         const confirm = document.getElementById('auth-gate-password-confirm')?.value ?? '';
+        if (!confirm) {
+            setAuthGateStatus('Please confirm your password.', 'error');
+            document.getElementById('auth-gate-password-confirm')?.focus();
+            return;
+        }
         if (password !== confirm) {
             setAuthGateStatus('Passwords do not match.', 'error');
             document.getElementById('auth-gate-password-confirm')?.focus();
@@ -2512,11 +2521,11 @@ async function authGateSubmit() {
 
     if (btn) {
         btn.disabled = true;
-        btn.textContent = authGateMode === 'signup' ? 'Creating account…' : 'Signing in…';
+        btn.textContent = mode === 'signup' ? 'Creating account…' : 'Signing in…';
     }
 
     try {
-        if (authGateMode === 'signup') {
+        if (mode === 'signup') {
             const redirect = window.location.origin + window.location.pathname;
             const { data, error } = await client.auth.signUp({
                 email,
@@ -2549,10 +2558,18 @@ async function authGateSubmit() {
             return;
         }
         setAuthGateStatus('Success. Loading…', 'success');
+    } catch (err) {
+        console.error('authGateSubmit', err);
+        const msg = err?.message || String(err);
+        setAuthGateStatus(msg || 'Something went wrong. Check the browser console.', 'error');
+        showToast('Sign-in failed', 'error');
     } finally {
         if (btn) {
             btn.disabled = false;
-            const checkedMode = document.querySelector('input[name="authGateMode"]:checked')?.value || 'signin';
+            const checkedMode =
+                document.querySelector('input[name="authGateMode"]:checked')?.value === 'signup'
+                    ? 'signup'
+                    : 'signin';
             btn.textContent = checkedMode === 'signup' ? 'Create account' : 'Sign in';
         }
     }
