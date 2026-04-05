@@ -61,31 +61,50 @@
             </div>
 
             <div id="auth-gate-form" class="bg-white/10 backdrop-blur rounded-2xl p-6 text-left">
-                <div class="flex rounded-xl overflow-hidden mb-4 bg-black/20 p-0.5">
-                    <button type="button" id="auth-gate-tab-signin" class="auth-gate-tab flex-1 py-2 text-sm font-semibold rounded-lg bg-white text-deep-green transition-colors">
+                <form id="auth-gate-credentials-form" novalidate>
+                    <fieldset class="border-0 p-0 m-0 mb-4">
+                        <legend class="sr-only">Choose sign in or create account</legend>
+                        <div class="grid grid-cols-2 gap-1 p-1 rounded-xl bg-black/25" role="tablist" aria-label="Account mode">
+                            <label class="cursor-pointer block">
+                                <input type="radio" name="authGateMode" id="auth-mode-signin" value="signin" checked
+                                    class="peer sr-only auth-gate-mode-input">
+                                <span class="block w-full py-2.5 text-center text-sm font-semibold rounded-lg transition-colors text-green-100 peer-checked:bg-white peer-checked:text-deep-green peer-focus-visible:ring-2 peer-focus-visible:ring-saffron">
+                                    Sign in
+                                </span>
+                            </label>
+                            <label class="cursor-pointer block">
+                                <input type="radio" name="authGateMode" id="auth-mode-signup" value="signup"
+                                    class="peer sr-only auth-gate-mode-input">
+                                <span class="block w-full py-2.5 text-center text-sm font-semibold rounded-lg transition-colors text-green-100 peer-checked:bg-white peer-checked:text-deep-green peer-focus-visible:ring-2 peer-focus-visible:ring-saffron">
+                                    Create account
+                                </span>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <label for="auth-gate-email" class="block text-sm font-medium text-green-100 mb-2">Email</label>
+                    <input type="email" id="auth-gate-email" name="email" required autocomplete="email" placeholder="you@example.com"
+                        class="w-full px-4 py-3 rounded-xl text-gray-900 border-0 focus:ring-2 focus:ring-saffron mb-3">
+
+                    <label for="auth-gate-password" class="block text-sm font-medium text-green-100 mb-2">Password</label>
+                    <input type="password" id="auth-gate-password" name="password" required minlength="6" autocomplete="current-password" placeholder="At least 6 characters"
+                        class="w-full px-4 py-3 rounded-xl text-gray-900 border-0 focus:ring-2 focus:ring-saffron mb-3">
+
+                    <div id="auth-gate-confirm-wrap" class="hidden" aria-hidden="true">
+                        <label for="auth-gate-password-confirm" class="block text-sm font-medium text-green-100 mb-2">Confirm password</label>
+                        <input type="password" id="auth-gate-password-confirm" name="password_confirm" autocomplete="new-password" placeholder="Repeat password"
+                            class="w-full px-4 py-3 rounded-xl text-gray-900 border-0 focus:ring-2 focus:ring-saffron mb-3">
+                    </div>
+
+                    <p id="auth-gate-status" class="text-sm mb-3 min-h-[1.25rem] rounded-lg px-2 py-1" role="status" aria-live="polite"></p>
+
+                    <button type="submit" id="auth-gate-primary-btn"
+                        class="w-full bg-saffron hover:bg-saffron-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors">
                         Sign in
                     </button>
-                    <button type="button" id="auth-gate-tab-signup" class="auth-gate-tab flex-1 py-2 text-sm font-semibold rounded-lg text-green-100 transition-colors">
-                        Create account
-                    </button>
-                </div>
-                <label class="block text-sm font-medium text-green-100 mb-2">Email</label>
-                <input type="email" id="auth-gate-email" autocomplete="email" placeholder="you@example.com"
-                    class="w-full px-4 py-3 rounded-xl text-gray-900 border-0 focus:ring-2 focus:ring-saffron mb-3">
-                <label class="block text-sm font-medium text-green-100 mb-2">Password</label>
-                <input type="password" id="auth-gate-password" autocomplete="current-password" placeholder="••••••••"
-                    class="w-full px-4 py-3 rounded-xl text-gray-900 border-0 focus:ring-2 focus:ring-saffron mb-3">
-                <div id="auth-gate-confirm-wrap" class="hidden">
-                    <label class="block text-sm font-medium text-green-100 mb-2">Confirm password</label>
-                    <input type="password" id="auth-gate-password-confirm" autocomplete="new-password" placeholder="••••••••"
-                        class="w-full px-4 py-3 rounded-xl text-gray-900 border-0 focus:ring-2 focus:ring-saffron mb-3">
-                </div>
-                <button type="button" id="auth-gate-primary-btn"
-                    class="w-full bg-saffron hover:bg-saffron-dark text-white font-semibold py-3 rounded-xl transition-colors">
-                    Sign in
-                </button>
+                </form>
                 <p id="auth-gate-hint" class="text-xs text-green-200/90 mt-4 text-center">
-                    Use the same email and password each visit. No inbox required.
+                    Sign in with email and password. New users: choose <strong class="text-white">Create account</strong> above, then submit.
                 </p>
             </div>
         </div>

@@ -2415,78 +2415,147 @@ function updateAuthUI(session) {
 /** 'signin' | 'signup' */
 let authGateMode = 'signin';
 
+function setAuthGateStatus(text, kind = 'clear') {
+    const el = document.getElementById('auth-gate-status');
+    if (!el) return;
+    el.textContent = text || '';
+    el.className =
+        'text-sm mb-3 min-h-[1.25rem] rounded-lg px-2 py-1';
+    if (kind === 'error') {
+        el.classList.add('bg-red-500/25', 'text-red-50');
+    } else if (kind === 'success') {
+        el.classList.add('bg-white/15', 'text-white');
+    } else if (text) {
+        el.classList.add('text-green-100');
+    }
+}
+
 function setAuthGateMode(mode) {
+    if (mode !== 'signin' && mode !== 'signup') return;
     authGateMode = mode;
-    const signinTab = document.getElementById('auth-gate-tab-signin');
-    const signupTab = document.getElementById('auth-gate-tab-signup');
+
+    const signinRadio = document.getElementById('auth-mode-signin');
+    const signupRadio = document.getElementById('auth-mode-signup');
+    if (signinRadio && signupRadio) {
+        if (mode === 'signin') signinRadio.checked = true;
+        else signupRadio.checked = true;
+    }
+
     const confirmWrap = document.getElementById('auth-gate-confirm-wrap');
+    const confirmInput = document.getElementById('auth-gate-password-confirm');
     const primaryBtn = document.getElementById('auth-gate-primary-btn');
     const pwd = document.getElementById('auth-gate-password');
     const hint = document.getElementById('auth-gate-hint');
 
-    const active = 'flex-1 py-2 text-sm font-semibold rounded-lg bg-white text-deep-green transition-colors';
-    const inactive = 'flex-1 py-2 text-sm font-semibold rounded-lg text-green-100 transition-colors';
-
     if (mode === 'signin') {
-        signinTab.className = active;
-        signupTab.className = inactive;
         confirmWrap?.classList.add('hidden');
-        primaryBtn.textContent = 'Sign in';
-        if (pwd) pwd.autocomplete = 'current-password';
-        if (hint) hint.textContent = 'Use the same email and password each visit. No inbox required.';
+        confirmWrap?.setAttribute('aria-hidden', 'true');
+        confirmInput?.removeAttribute('required');
+        if (primaryBtn) primaryBtn.textContent = 'Sign in';
+        if (pwd) {
+            pwd.autocomplete = 'current-password';
+            pwd.setAttribute('minlength', '6');
+        }
+        if (hint) {
+            hint.innerHTML =
+                'Use your email and password. Need an account? Choose <strong class="text-white">Create account</strong> at the top.';
+        }
     } else {
-        signupTab.className = active;
-        signinTab.className = inactive;
         confirmWrap?.classList.remove('hidden');
-        primaryBtn.textContent = 'Create account';
-        if (pwd) pwd.autocomplete = 'new-password';
-        if (hint) hint.textContent = 'Choose a strong password. If your project requires email confirmation, check your inbox after signing up.';
+        confirmWrap?.setAttribute('aria-hidden', 'false');
+        confirmInput?.setAttribute('required', '');
+        if (primaryBtn) primaryBtn.textContent = 'Create account';
+        if (pwd) {
+            pwd.autocomplete = 'new-password';
+            pwd.setAttribute('minlength', '6');
+        }
+        if (hint) {
+            hint.textContent =
+                'After submitting, you may be signed in immediately, or asked to confirm your email first (depends on your Supabase project settings).';
+        }
     }
+    setAuthGateStatus('', 'clear');
 }
 
-async function authGatePrimaryAction() {
+async function authGateSubmit() {
     const email = document.getElementById('auth-gate-email')?.value.trim();
     const password = document.getElementById('auth-gate-password')?.value ?? '';
     const client = getSupabase();
+    const btn = document.getElementById('auth-gate-primary-btn');
+
+    setAuthGateStatus('', 'clear');
+
     if (!client) {
+        setAuthGateStatus('Supabase is not configured. Add URL and anon key to config.js.', 'error');
         showToast('Configure Supabase in config.js', 'warning');
         return;
     }
     if (!email) {
-        showToast('Enter your email', 'warning');
+        setAuthGateStatus('Please enter your email.', 'error');
+        document.getElementById('auth-gate-email')?.focus();
         return;
     }
     if (!password || password.length < 6) {
-        showToast('Password must be at least 6 characters', 'warning');
+        setAuthGateStatus('Password must be at least 6 characters.', 'error');
+        document.getElementById('auth-gate-password')?.focus();
         return;
     }
 
     if (authGateMode === 'signup') {
         const confirm = document.getElementById('auth-gate-password-confirm')?.value ?? '';
         if (password !== confirm) {
-            showToast('Passwords do not match', 'warning');
+            setAuthGateStatus('Passwords do not match.', 'error');
+            document.getElementById('auth-gate-password-confirm')?.focus();
             return;
         }
-        const redirect = window.location.origin + window.location.pathname;
-        const { data, error } = await client.auth.signUp({
-            email,
-            password,
-            options: { emailRedirectTo: redirect }
-        });
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = authGateMode === 'signup' ? 'Creating account…' : 'Signing in…';
+    }
+
+    try {
+        if (authGateMode === 'signup') {
+            const redirect = window.location.origin + window.location.pathname;
+            const { data, error } = await client.auth.signUp({
+                email,
+                password,
+                options: { emailRedirectTo: redirect }
+            });
+            if (error) {
+                setAuthGateStatus(error.message, 'error');
+                showToast(error.message, 'error');
+                return;
+            }
+            if (data.session) {
+                setAuthGateStatus('Account created. Loading your data…', 'success');
+                showToast('Signed in', 'success');
+            } else {
+                setAuthGateStatus(
+                    'Account created. Check your email to confirm, then use Sign in below.',
+                    'success'
+                );
+                showToast('Confirm your email if required, then sign in', 'success');
+                setAuthGateMode('signin');
+            }
+            return;
+        }
+
+        const { error } = await client.auth.signInWithPassword({ email, password });
         if (error) {
+            setAuthGateStatus(error.message, 'error');
             showToast(error.message, 'error');
             return;
         }
-        if (data.session) {
-            showToast('Account created — you are signed in', 'success');
-        } else {
-            showToast('Check your email to confirm your account, then sign in here', 'success');
+        setAuthGateStatus('Success. Loading…', 'success');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            const checkedMode = document.querySelector('input[name="authGateMode"]:checked')?.value || 'signin';
+            btn.textContent = checkedMode === 'signup' ? 'Create account' : 'Sign in';
         }
-        return;
     }
-
-    const { error } = await client.auth.signInWithPassword({ email, password });
-    if (error) showToast(error.message, 'error');
 }
 
 async function handleSignedOut() {
@@ -2714,16 +2783,14 @@ function bindMainAppListeners() {
 document.addEventListener('DOMContentLoaded', async () => {
     updateSupabaseConfigHint();
 
-    document.getElementById('auth-gate-tab-signin')?.addEventListener('click', () => setAuthGateMode('signin'));
-    document.getElementById('auth-gate-tab-signup')?.addEventListener('click', () => setAuthGateMode('signup'));
-    document.getElementById('auth-gate-primary-btn')?.addEventListener('click', authGatePrimaryAction);
-    ['auth-gate-email', 'auth-gate-password', 'auth-gate-password-confirm'].forEach((id) => {
-        document.getElementById(id)?.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                authGatePrimaryAction();
-            }
+    document.querySelectorAll('.auth-gate-mode-input').forEach((input) => {
+        input.addEventListener('change', () => {
+            if (input.checked) setAuthGateMode(input.value);
         });
+    });
+    document.getElementById('auth-gate-credentials-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        authGateSubmit();
     });
     setAuthGateMode('signin');
 

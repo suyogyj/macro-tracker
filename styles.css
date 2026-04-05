@@ -35,6 +35,19 @@
     --transition-normal: 300ms ease;
 }
 
+/* Screen-reader only (auth gate radios; Tailwind sr-only mirrors this) */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
 /* ===== Base Styles ===== */
 * {
     box-sizing: border-box;
