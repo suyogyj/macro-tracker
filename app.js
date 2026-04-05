@@ -257,7 +257,7 @@ async function mergeIndbCatalogFromNetwork(force = false) {
 
     let list;
     try {
-        const res = await fetch('./data/indb-foods.json', { cache: 'no-store' });
+        const res = await fetchWithTimeout(appRelativeUrl('data/indb-foods.json'), { cache: 'no-store' }, 25000);
         if (!res.ok) throw new Error(String(res.status));
         list = await res.json();
     } catch (e) {
@@ -2530,6 +2530,39 @@ function withNetworkTimeout(promise, ms, message) {
     ]);
 }
 
+/** Resolve asset paths relative to the app directory (handles /repo vs /repo/ and /repo/index.html). */
+function appRelativeUrl(path) {
+    const rel = path.replace(/^\//, '');
+    let pathname = window.location.pathname || '/';
+    if (!pathname.endsWith('/')) {
+        pathname = pathname.includes('.') ? pathname.replace(/\/[^/]+$/, '/') : `${pathname}/`;
+    }
+    return new URL(rel, `${window.location.origin}${pathname}`).href;
+}
+
+async function fetchWithTimeout(url, init = {}, ms = 25000) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    try {
+        return await fetch(url, { ...init, signal: ctrl.signal });
+    } finally {
+        clearTimeout(t);
+    }
+}
+
+function reportBootFailure(err) {
+    const msg =
+        err?.name === 'AbortError'
+            ? 'Loading the food catalog timed out. Check your connection and reload.'
+            : err?.message || 'Could not finish loading. Try reloading the page.';
+    console.error('App boot failed', err);
+    setAuthGateStatus(msg, 'error');
+    showToast('Could not load app', 'error');
+}
+
+/** Max time for IndexedDB + catalog fetch + cloud pull before we surface an error. */
+const APP_BOOT_TIMEOUT_MS = 90000;
+
 async function authGateSubmit() {
     const mode =
         document.querySelector('input[name="authGateMode"]:checked')?.value === 'signup' ? 'signup' : 'signin';
@@ -2599,9 +2632,9 @@ async function authGateSubmit() {
                 return;
             }
             if (data.session) {
-                setAuthGateStatus('Account created. Loading your data…', 'success');
+                setAuthGateStatus('Loading your data…', 'success');
                 showToast('Signed in', 'success');
-                await ensureAppBooted(data.session);
+                void ensureAppBooted(data.session);
             } else {
                 setAuthGateStatus(
                     'Account created. Check your email to confirm, then use Sign in below.',
@@ -2626,7 +2659,7 @@ async function authGateSubmit() {
         const session = signInData?.session;
         if (session?.user) {
             setAuthGateStatus('Loading your data…', 'success');
-            await ensureAppBooted(session);
+            void ensureAppBooted(session);
         } else {
             setAuthGateStatus('Signed in but no session returned. Try again or confirm your email.', 'error');
             showToast('No session after sign-in', 'warning');
@@ -2679,7 +2712,7 @@ async function ensureAppBooted(session) {
         return;
     }
     if (!appBootPromise) {
-        appBootPromise = (async () => {
+        const runBoot = async () => {
             await openDatabaseForUser(uid);
             await initializeDatabase();
             await pullFromSupabase(false);
@@ -2693,9 +2726,18 @@ async function ensureAppBooted(session) {
             lastBootedUserId = uid;
             const { data: { session: s } } = await getSupabase().auth.getSession();
             updateAuthUI(s);
-        })().finally(() => {
-            appBootPromise = null;
-        });
+        };
+        appBootPromise = withNetworkTimeout(
+            runBoot(),
+            APP_BOOT_TIMEOUT_MS,
+            'Timed out loading the app (network or device storage). Check your connection and reload.'
+        )
+            .catch((e) => {
+                reportBootFailure(e);
+            })
+            .finally(() => {
+                appBootPromise = null;
+            });
     }
     return appBootPromise;
 }
