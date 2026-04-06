@@ -12,6 +12,13 @@
  * - JSON export/import
  */
 
+window.addEventListener('error', function(e) {
+    document.body.innerHTML += '<div style="color:red; background:white; position:fixed; top:0; left:0; z-index:9999; padding: 10px;">' + e.message + '<br>' + e.filename + ':' + e.lineno + '</div>';
+});
+window.addEventListener('unhandledrejection', function(e) {
+    document.body.innerHTML += '<div style="color:red; background:white; position:fixed; top:50px; left:0; z-index:9999; padding: 10px;">Unhandled: ' + (e.reason && e.reason.message ? e.reason.message : e.reason) + '</div>';
+});
+
 // ===== DATABASE SETUP =====
 
 /** Bump when data/indb-foods.json is regenerated so clients merge new rows. */
