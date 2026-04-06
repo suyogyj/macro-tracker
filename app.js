@@ -67,13 +67,35 @@ async function closeUserDatabase() {
 // ===== SUPABASE (optional; config.js) =====
 let supabaseClient = null;
 
+/** Bound how long each Supabase HTTP call may hang (broken IPv6 / captive portals often stall otherwise). */
+function createFetchWithDeadline(ms) {
+    return async (input, init = {}) => {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), ms);
+        const upstream = init.signal;
+        if (upstream) {
+            if (upstream.aborted) {
+                clearTimeout(timer);
+                throw new DOMException('Aborted', 'AbortError');
+            }
+            upstream.addEventListener('abort', () => ctrl.abort(), { once: true });
+        }
+        try {
+            return await fetch(input, { ...init, signal: ctrl.signal });
+        } finally {
+            clearTimeout(timer);
+        }
+    };
+}
+
 function getSupabase() {
     if (supabaseClient) return supabaseClient;
     const cfg = typeof window !== 'undefined' ? window.MACRO_TRACKER_CONFIG : null;
     if (!cfg?.supabaseUrl || !cfg?.supabaseAnonKey) return null;
     if (typeof window.supabase === 'undefined' || !window.supabase?.createClient) return null;
     supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+        global: { fetch: createFetchWithDeadline(60000) }
     });
     return supabaseClient;
 }
@@ -1161,9 +1183,9 @@ async function createInitialDataFile() {
 // ===== DATABASE INITIALIZATION =====
 
 /**
- * Initialize database with starter pack (only on first run) and INDB catalog merge
+ * Fast IndexedDB setup: starter pack (first run) + goals. Does not fetch INDB (large) or cloud.
  */
-async function initializeDatabase() {
+async function initializeDatabaseCore() {
     try {
         const foodCount = await db.foods.count();
 
@@ -1172,8 +1194,6 @@ async function initializeDatabase() {
             await db.foods.bulkAdd(starterRows);
             console.log('Maharashtrian Starter Pack loaded successfully!');
         }
-
-        await mergeIndbCatalogFromNetwork();
 
         const settings = await db.userSettings.get(1);
         if (!settings) {
@@ -1193,6 +1213,14 @@ async function initializeDatabase() {
         console.error('Database initialization error:', error);
         showToast('Error initializing database', 'error');
     }
+}
+
+/**
+ * Full local init including INDB catalog merge (can be slow on first load / large JSON).
+ */
+async function initializeDatabase() {
+    await initializeDatabaseCore();
+    await mergeIndbCatalogFromNetwork();
 }
 
 // ===== TAB NAVIGATION =====
@@ -2610,9 +2638,12 @@ async function authGateSubmit() {
         btn.textContent = mode === 'signup' ? 'Creating account…' : 'Signing in…';
     }
 
-    const authTimeoutMs = 45000;
+    const authTimeoutMs = 90000;
+    const originHint = `${window.location.origin}${window.location.pathname}`;
     const timeoutMsg =
-        'Request timed out. Check your connection, Supabase project status, and that this site URL is allowed in Supabase Auth → URL configuration.';
+        `Sign-in timed out (no response from Supabase in ${Math.round(authTimeoutMs / 1000)}s). ` +
+        `Check internet/VPN, that your Supabase project is not paused, and Authentication → URL configuration ` +
+        `includes this site (try adding: ${originHint}).`;
 
     try {
         if (mode === 'signup') {
@@ -2714,15 +2745,18 @@ async function ensureAppBooted(session) {
     if (!appBootPromise) {
         const runBoot = async () => {
             await openDatabaseForUser(uid);
-            await initializeDatabase();
-            await pullFromSupabase(false);
-            scheduleCloudSync();
+            await initializeDatabaseCore();
             showMainAppUI();
             if (!mainAppListenersBound) {
                 bindMainAppListeners();
                 mainAppListenersBound = true;
             }
             await refreshMainAppData();
+            await mergeIndbCatalogFromNetwork(false);
+            await pullFromSupabase(false);
+            await loadDayLogs();
+            await renderFoodLibraryFromUi();
+            scheduleCloudSync();
             lastBootedUserId = uid;
             const { data: { session: s } } = await getSupabase().auth.getSession();
             updateAuthUI(s);
